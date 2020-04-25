@@ -1,0 +1,9 @@
+D:\study\Raft.Net\Raft\bin\Debug\Raft.dll
+D:\study\Raft.Net\Raft\bin\Debug\Raft.pdb
+D:\study\Raft.Net\Raft\bin\Debug\DBreeze.dll
+D:\study\Raft.Net\Raft\bin\Debug\DBreeze.xml
+D:\study\Raft.Net\Raft\obj\Debug\Raft.csprojAssemblyReference.cache
+D:\study\Raft.Net\Raft\obj\Debug\Raft.csproj.CoreCompileInputs.cache
+D:\study\Raft.Net\Raft\obj\Debug\Raft.csproj.CopyComplete
+D:\study\Raft.Net\Raft\obj\Debug\Raft.dll
+D:\study\Raft.Net\Raft\obj\Debug\Raft.pdb

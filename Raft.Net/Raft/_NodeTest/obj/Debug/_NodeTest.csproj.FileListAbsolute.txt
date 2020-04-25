@@ -1,0 +1,12 @@
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\_NodeTest.exe.config
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\_NodeTest.exe
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\_NodeTest.pdb
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\DBreeze.dll
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\Raft.dll
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\Raft.pdb
+D:\study\Raft.Net\Raft\_NodeTest\bin\Debug\DBreeze.xml
+D:\study\Raft.Net\Raft\_NodeTest\obj\Debug\_NodeTest.csprojAssemblyReference.cache
+D:\study\Raft.Net\Raft\_NodeTest\obj\Debug\_NodeTest.csproj.CoreCompileInputs.cache
+D:\study\Raft.Net\Raft\_NodeTest\obj\Debug\_NodeTest.csproj.CopyComplete
+D:\study\Raft.Net\Raft\_NodeTest\obj\Debug\_NodeTest.exe
+D:\study\Raft.Net\Raft\_NodeTest\obj\Debug\_NodeTest.pdb

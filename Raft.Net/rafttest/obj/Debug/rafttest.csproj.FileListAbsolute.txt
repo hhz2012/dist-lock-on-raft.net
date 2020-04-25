@@ -1,0 +1,12 @@
+D:\study\Raft.Net\rafttest\bin\Debug\rafttest.exe.config
+D:\study\Raft.Net\rafttest\bin\Debug\rafttest.exe
+D:\study\Raft.Net\rafttest\bin\Debug\rafttest.pdb
+D:\study\Raft.Net\rafttest\bin\Debug\Raft.dll
+D:\study\Raft.Net\rafttest\bin\Debug\DBreeze.dll
+D:\study\Raft.Net\rafttest\bin\Debug\Raft.pdb
+D:\study\Raft.Net\rafttest\bin\Debug\DBreeze.xml
+D:\study\Raft.Net\rafttest\obj\Debug\rafttest.csprojAssemblyReference.cache
+D:\study\Raft.Net\rafttest\obj\Debug\rafttest.csproj.CoreCompileInputs.cache
+D:\study\Raft.Net\rafttest\obj\Debug\rafttest.csproj.CopyComplete
+D:\study\Raft.Net\rafttest\obj\Debug\rafttest.exe
+D:\study\Raft.Net\rafttest\obj\Debug\rafttest.pdb
