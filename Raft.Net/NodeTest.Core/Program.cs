@@ -19,7 +19,7 @@ namespace NodeTest.Core
             }
         }
 
-        static Raft.RaftEmulator.Emulator dd = null;
+        static Raft.RaftEmulator.ClusterManagerEmulator dd = null;
         static byte val = 0;
 
         static void Main(string[] args)
@@ -46,7 +46,7 @@ namespace NodeTest.Core
             //UdpTester t = new UdpTester(tm, log);
             //t.Start(40000);
 
-            dd = new Raft.RaftEmulator.Emulator();
+            dd = new Raft.RaftEmulator.ClusterManagerEmulator();
             //dd.StartEmulateNodes(5);
             dd.StartEmulateTcpNodes(5);
 
@@ -81,7 +81,10 @@ namespace NodeTest.Core
                                         val++;
                                         dd.SetValue(new byte[] { (byte)val });
                                         break;
-
+                                    case "send": //set 1 - will create an entity
+                                        val++;
+                                        dd.SendData(Convert.ToInt32(spl[1]), "shards:entity1");
+                                        break;
                                     case "set10": //set10 1 - will create an entity
                                         for (int qi = 0; qi < 10; qi++)
                                             dd.SetValue(new byte[] { 12 });
@@ -155,7 +158,10 @@ namespace NodeTest.Core
 
             rn = TcpRaftNode.GetFromConfig(System.IO.File.ReadAllText(args[2]),
                dbreezePath, Convert.ToInt32(args[1]), log,
-               (entName, index, data) => { Console.WriteLine($"wow committed {entName}/{index}; DataLen: {(data == null ? -1 : data.Length)};"); return true; });
+               (entName, index, data,node) => {
+                   Console.WriteLine($"wow committed {entName}/{index}; DataLen: {(data == null ? -1 : data.Length)};");
+                   return true; 
+               });
 
 
 

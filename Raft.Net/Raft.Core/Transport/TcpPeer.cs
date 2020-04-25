@@ -136,8 +136,21 @@ namespace Raft.Transport
                         
                         Task.Run(() =>
                         {
-                            trn.GetNodeByEntityName(msg.EntityName)
-                                .IncomingSignalHandler(this.na, msg.RaftSignalType, msg.Data);
+                            try
+                            {
+                                var node = trn.GetNodeByEntityName(msg.EntityName);
+                                if (node != null)
+                                {
+                                    node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.Data);
+                                }else
+                                {
+                                    Console.WriteLine("cant find node");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex);
+                            }
                         });
                         return;
                     case 3: //Handshake ACK

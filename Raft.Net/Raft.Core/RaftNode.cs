@@ -120,9 +120,10 @@ namespace Raft
         /// <summary>
         /// Supplied via constructor. Will be called and supply
         /// </summary>
-        Func<string, ulong, byte[], bool> OnCommit = null;
+        Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
 
         internal DBreezeEngine db;
+        public string NodeName { get; set; }
 
         /// <summary>
         /// 
@@ -132,7 +133,7 @@ namespace Raft
         /// <param name="raftSender"></param>
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
-        public RaftNode(RaftEntitySettings settings, DBreezeEngine dbEngine, IRaftComSender raftSender, IWarningLog log, Func<string, ulong, byte[], bool> OnCommit)
+        public RaftNode(RaftEntitySettings settings, DBreezeEngine dbEngine, IRaftComSender raftSender, IWarningLog log, Func<string, ulong, byte[],RaftNode, bool> OnCommit)
         {
 
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
@@ -1289,7 +1290,7 @@ namespace Raft
                         ////    Console.WriteLine($"LCIT={this.NodeStateLog.LastCommittedIndex}/{this.NodeStateLog.LastBusinessLogicCommittedIndex}/---{this.LeaderHeartbeat.LastStateLogCommittedIndex} ");
 
 
-                        if (this.OnCommit(entitySettings.EntityName, sle.Index, sle.Data))
+                        if (this.OnCommit(entitySettings.EntityName, sle.Index, sle.Data,this))
                         {
                             //In case if business logic commit was successful
                             lock (lock_Operations)

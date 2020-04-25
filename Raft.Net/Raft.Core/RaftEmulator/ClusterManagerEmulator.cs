@@ -16,51 +16,79 @@ using Raft.Transport;
 
 namespace Raft.RaftEmulator
 {
-    public class Emulator:IRaftComSender,IWarningLog
+    public class ClusterManagerEmulator:IRaftComSender,IWarningLog
     {
         Dictionary<long, IEmulatedNode> nodes = new Dictionary<long, IEmulatedNode>();
         object sync_nodes = new object();
         List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
         RaftEntitySettings re_settings = null;
-
+        
         public void StartEmulateTcpNodes(int nodesQuantity)
         {
-
-
-
             TcpRaftNode trn = null;
 
-            re_settings = new RaftEntitySettings()
-            {
-                VerboseRaft = true,
-                //VerboseRaft = false,
-                VerboseTransport = false,
-
-                DelayedPersistenceIsActive = true,
-
-                //InMemoryEntity = true,
-                //InMemoryEntityStartSyncFromLatestEntity = true
-            };
+          
                         
             for(int i = 0;i< nodesQuantity;i++)
                 eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = 4250 + i });
-            
-            for (int i = 0; i < nodesQuantity; i++)
+
+            List<RaftEntitySettings> list = new List<RaftEntitySettings>();
+           
+                re_settings = new RaftEntitySettings()
+                {
+                    VerboseRaft = true,
+                    //VerboseRaft = false,
+                    VerboseTransport = false,
+
+                    DelayedPersistenceIsActive = true,
+
+                    //InMemoryEntity = true,
+                    //InMemoryEntityStartSyncFromLatestEntity = true
+                };
+                //S:\temp\RaftDbr
+                list.Add(re_settings);
+           
+                for (int i = 0; i < nodesQuantity; i++)
             {
                 lock (sync_nodes)
                 {
-                    //S:\temp\RaftDbr
-                    trn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = new List<RaftEntitySettings> { re_settings } }, @"D:\Temp\RaftDBreeze\node" + (4250 + i),
-                        (entityName, index, data) => { 
-                            Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); return true; },
-                        4250 + i, this);
+                    var nodeName = "entity" + (i + 1);
+                    trn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings =  new List<RaftEntitySettings>() { re_settings } }, @"D:\Temp\RaftDBreeze\node" + (4250 + i),
+                        (entityName, index, data,node) => { 
+                            Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); 
+                            //handle shards operation
+                            try
+                            {
+                                string str = System.Text.Encoding.Default.GetString(data);
+                                if (str.StartsWith("shards:"))
+                                {
+                                    string json = str.Substring(7);
+                                    if (json==node.NodeName)
+                                    {
+                                        //start a shard
+                                        var shard = new ShardEmulator();
+                                        shard.StartEmulateTcpNodes(3);
+                                        this.shards.Add(shard);
+                                    }
+
+                                }
+
+                               // Console.WriteLine(str+" is received");
+                            }
+                            catch (Exception ex)
+                            {
+
+                            }
+                            return true; },
+                        4250 + i, nodeName, this);
 
                     //rn = new TcpRaftNode(eps, @"S:\temp\RaftDbr\node" + (4250 + i), 4250 + i,
                     //       (data) => {
                     //           Console.WriteLine($"wow committed");
                     //       }, this, rn_settings);
-           
-                    nodes.Add(trn.GetNodeByEntityName("default").NodeAddress.NodeAddressId, trn);
+
+                    var item = trn.GetNodeByEntityName(re_settings.EntityName);
+                    nodes.Add(item.NodeAddress.NodeAddressId, trn);
                     
                 }
 
@@ -118,7 +146,7 @@ namespace Raft.RaftEmulator
             for (int i = 0; i < nodesQuantity; i++)
             {
                 rn = new RaftNode(re_settings, new DBreeze.DBreezeEngine(@"D:\Temp\RaftDBreeze\node" + (4250 + i)), this, this,
-                    (entityName, index, data) => { 
+                    (entityName, index, data,node) => { 
                         return true;
                     });
                 //rn.Verbose = true;
@@ -139,18 +167,40 @@ namespace Raft.RaftEmulator
         /// </summary>
         /// <param name="nodeId"></param>
         /// <param name="data"></param>
-        public void SendData(int nodeId, string data)
+        public void SendData(int nodeId, string data, string entityName = "default")
         {
-            //IEmulatedNode node = null;
-            //lock (sync_nodes)
-            //{
-            //    nodes.TryGetValue(nodeId, out node);
-            //}
-            ////var node = nodes.Where(r => r.NodeAddress.NodeAddressId == nodeId).FirstOrDefault();
-            //if (node == null)
-            //     return;
+            Task.Run(() =>
+            {
+                lock (sync_nodes)
+                {
+                    if (nodes.Count < 1)
+                        return;
 
-            //((RaftNode)node).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data),0);
+
+                    if (nodes.First().Value is TcpRaftNode)
+                    {
+                        var leader = nodes.Where(r => ((TcpRaftNode)r.Value).GetNodeByEntityName(entityName) != null && ((TcpRaftNode)r.Value).GetNodeByEntityName(entityName).IsRunning && ((TcpRaftNode)r.Value).GetNodeByEntityName(entityName).NodeState == RaftNode.eNodeState.Leader)
+                        .Select(r => (TcpRaftNode)r.Value).FirstOrDefault();
+
+                        if (leader == null)
+                            return;
+
+                        ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                    }
+                    else
+                    {
+                        var leader = nodes.Where(r => ((RaftNode)r.Value).IsRunning && ((RaftNode)r.Value).NodeState == RaftNode.eNodeState.Leader)
+                        .Select(r => (RaftNode)r.Value).FirstOrDefault();
+
+                        if (leader == null)
+                            return;
+
+                       ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                    }
+                }
+            });
+
+           
         }
 
         ///// <summary>
@@ -195,8 +245,8 @@ namespace Raft.RaftEmulator
                     lock (sync_nodes)
                     {
                         trn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = new List<RaftEntitySettings> { re_settings } }, @"D:\Temp\RaftDBreeze\node"+ nodeId,
-                            (entityName, index, data) => { Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); return true; },
-                            nodeId,  this);
+                            (entityName, index, data,node) => { Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); return true; },
+                            nodeId,  null,this);
                         nodes[trn.GetNodeByEntityName("default").NodeAddress.NodeAddressId] = trn;
                     }
                     trn.Start();
@@ -251,6 +301,7 @@ namespace Raft.RaftEmulator
             if (node != null)
                 node.EmulationSendToAll();
         }
+        List<ShardEmulator> shards = new List<ShardEmulator>();
 
         #region "IRaftComSender"
 
