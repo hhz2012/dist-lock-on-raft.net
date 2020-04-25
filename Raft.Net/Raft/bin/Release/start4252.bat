@@ -1,1 +1,0 @@
-"%~dp0_NodeTest.exe" 1 4252 "%~dp0raftConfigJSON.txt" "D:\Temp\RaftDBreeze\Node4252"

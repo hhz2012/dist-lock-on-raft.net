@@ -1,9 +1,0 @@
-D:\study\Raft.Net\RaftStandard\bin\Debug\netstandard2.0\Raft.deps.json
-D:\study\Raft.Net\RaftStandard\bin\Debug\netstandard2.0\Raft.dll
-D:\study\Raft.Net\RaftStandard\bin\Debug\netstandard2.0\Raft.pdb
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\RaftStandard.csprojAssemblyReference.cache
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\RaftStandard.csproj.CoreCompileInputs.cache
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\RaftStandard.AssemblyInfoInputs.cache
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\RaftStandard.AssemblyInfo.cs
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\Raft.dll
-D:\study\Raft.Net\RaftStandard\obj\Debug\netstandard2.0\Raft.pdb

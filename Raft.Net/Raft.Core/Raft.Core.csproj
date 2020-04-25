@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="RaftEmulator\UdpEmulator.cs" />
+    <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="!!!Notes.txt" />
+    <None Remove="!!!TODO.txt" />
+    <None Remove="StateMachine\!!!DBreezeScheme.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="!!!Notes.txt" />
+    <Content Include="!!!TODO.txt" />
+    <Content Include="StateMachine\!!!DBreezeScheme.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="RaftEmulator\UdpEmulator.cs" />
+    <None Include="Utils\ProtobufSerializatorExtension.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DBreeze" Version="1.95.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.11.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="StateMachine\AddLogEntryResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+</Project>

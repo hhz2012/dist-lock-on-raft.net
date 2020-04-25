@@ -1,0 +1,68 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "Raft.Core/1.0.0": {
+        "dependencies": {
+          "DBreeze": "1.95.0",
+          "Google.Protobuf": "3.11.4"
+        },
+        "runtime": {
+          "Raft.Core.dll": {}
+        }
+      },
+      "DBreeze/1.95.0": {
+        "runtime": {
+          "lib/netcoreapp2.0/DBreeze.dll": {
+            "assemblyVersion": "1.95.2019.812",
+            "fileVersion": "1.95.2019.812"
+          }
+        }
+      },
+      "Google.Protobuf/3.11.4": {
+        "dependencies": {
+          "System.Memory": "4.5.2"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Google.Protobuf.dll": {
+            "assemblyVersion": "3.11.4.0",
+            "fileVersion": "3.11.4.0"
+          }
+        }
+      },
+      "System.Memory/4.5.2": {}
+    }
+  },
+  "libraries": {
+    "Raft.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "DBreeze/1.95.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2vr9M6p6ojRrrtgazHQdYY/SnYfWhkJcn+qN6B37oWvZY/ZAL/Jo2qr4Yb5GbqzNHg5OEmq1KeTEArd5FLKGbg==",
+      "path": "dbreeze/1.95.0",
+      "hashPath": "dbreeze.1.95.0.nupkg.sha512"
+    },
+    "Google.Protobuf/3.11.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-dajCxjDCiPyZuqwZCkFJTwhn/0TJ5VesIs4fXvs56ez1VUi68JjhYMMsPjnJ9gcPqJwTMtXMU1WqUdXYiG1x4w==",
+      "path": "google.protobuf/3.11.4",
+      "hashPath": "google.protobuf.3.11.4.nupkg.sha512"
+    },
+    "System.Memory/4.5.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fvq1GNmUFwbKv+aLVYYdgu/+gc8Nu9oFujOxIjPrsf+meis9JBzTPDL6aP/eeGOz9yPj6rRLUbOjKMpsMEWpNg==",
+      "path": "system.memory/4.5.2",
+      "hashPath": "system.memory.4.5.2.nupkg.sha512"
+    }
+  }
+}
