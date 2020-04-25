@@ -68,7 +68,7 @@ namespace Raft.RaftEmulator
                                         //start a shard
                                         var shard = new ShardEmulator();
                                         shard.StartEmulateTcpNodes(3);
-                                        this.shards.Add(shard);
+                                        this.Shards.Add(shard);
                                     }
 
                                 }
@@ -301,7 +301,7 @@ namespace Raft.RaftEmulator
             if (node != null)
                 node.EmulationSendToAll();
         }
-        List<ShardEmulator> shards = new List<ShardEmulator>();
+        public List<ShardEmulator> Shards { get; set; } = new List<ShardEmulator>();
 
         #region "IRaftComSender"
 

@@ -19,7 +19,7 @@ namespace NodeTest.Core
             }
         }
 
-        static Raft.RaftEmulator.ClusterManagerEmulator dd = null;
+        static Raft.RaftEmulator.ClusterManagerEmulator cluster = null;
         static byte val = 0;
 
         static void Main(string[] args)
@@ -46,9 +46,9 @@ namespace NodeTest.Core
             //UdpTester t = new UdpTester(tm, log);
             //t.Start(40000);
 
-            dd = new Raft.RaftEmulator.ClusterManagerEmulator();
+            cluster = new Raft.RaftEmulator.ClusterManagerEmulator();
             //dd.StartEmulateNodes(5);
-            dd.StartEmulateTcpNodes(5);
+            cluster.StartEmulateTcpNodes(5);
 
 
 
@@ -69,50 +69,33 @@ namespace NodeTest.Core
                                 switch (spl[0])
                                 {
                                     case "start": //start 2
-                                        dd.Start(Convert.ToInt32(spl[1]));
+                                        cluster.Start(Convert.ToInt32(spl[1]));
                                         break;
                                     case "stop": //stop 1
-                                        dd.Stop(Convert.ToInt32(spl[1]));
+                                        cluster.Stop(Convert.ToInt32(spl[1]));
                                         break;
                                     case "test": //sendtestall 4254 - means node 4254 must send to all TcpMsg "Test"
-                                        dd.SendTestAll(Convert.ToInt32(spl[1]));
+                                        cluster.SendTestAll(Convert.ToInt32(spl[1]));
                                         break;
                                     case "set": //set 1 - will create an entity
                                         val++;
-                                        dd.SetValue(new byte[] { (byte)val });
+                                        cluster.SetValue(new byte[] { (byte)val });
                                         break;
                                     case "send": //set 1 - will create an entity
                                         val++;
-                                        dd.SendData(Convert.ToInt32(spl[1]), "shards:entity1");
+                                        cluster.SendData(Convert.ToInt32(spl[1]), "shards:entity1");
                                         break;
                                     case "set10": //set10 1 - will create an entity
                                         for (int qi = 0; qi < 10; qi++)
-                                            dd.SetValue(new byte[] { 12 });
+                                            cluster.SetValue(new byte[] { 12 });
+                                        break;
+                                    case "lock":
+                                        var shard = cluster.Shards.Count > 0 ? cluster.Shards[0]:null;
+                                        shard.SendData(1, "lock 1234");
                                         break;
                                 }
                             }
-                            //else if(spl.Count() == 1)
-                            //{
-                            //    switch (spl[0])
-                            //    {                                   
-                            //        case "testall": //sendtestall 4254 - means node 4254 must send to all TcpMsg "Test"
-                            //            Console.WriteLine("test 4250");
-                            //            dd.SendTestAll(4250);
-
-                            //            Console.WriteLine("test 4251");
-                            //            dd.SendTestAll(4251);
-
-                            //            Console.WriteLine("test 4252");
-                            //            dd.SendTestAll(4252);
-
-                            //            Console.WriteLine("test 4253");
-                            //            dd.SendTestAll(4253);
-
-                            //            Console.WriteLine("test 4254");
-                            //            dd.SendTestAll(4254);
-                            //            break;
-                            //    }
-                            //}
+                           
                             else
                                 Console.WriteLine("Unknown command");
                         }
