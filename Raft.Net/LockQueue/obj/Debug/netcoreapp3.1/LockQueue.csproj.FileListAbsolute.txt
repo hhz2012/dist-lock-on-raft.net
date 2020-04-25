@@ -1,0 +1,9 @@
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\bin\Debug\netcoreapp3.1\LockQueue.deps.json
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\bin\Debug\netcoreapp3.1\LockQueue.dll
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\bin\Debug\netcoreapp3.1\LockQueue.pdb
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.csprojAssemblyReference.cache
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.csproj.CoreCompileInputs.cache
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.AssemblyInfoInputs.cache
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.AssemblyInfo.cs
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.dll
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.pdb
