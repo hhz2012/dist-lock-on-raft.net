@@ -1,9 +1,0 @@
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.csproj.CoreCompileInputs.cache
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.AssemblyInfoInputs.cache
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.AssemblyInfo.cs
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\bin\Debug\netcoreapp3.1\Raft.Core.deps.json
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\bin\Debug\netcoreapp3.1\Raft.Core.dll
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.csprojAssemblyReference.cache
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\bin\Debug\netcoreapp3.1\Raft.Core.pdb
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.dll
-D:\mywork\myproj\distlock\Raft.Net\Raft.Core\obj\Debug\netcoreapp3.1\Raft.Core.pdb
