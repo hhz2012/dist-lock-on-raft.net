@@ -21,7 +21,7 @@ namespace Raft.Core.RaftEmulator
             try
             {
                 string str = System.Text.Encoding.Default.GetString(data);
-                string json = str.Substring(7);
+                string json = str;
                 ClusterCommand command = Newtonsoft.Json.JsonConvert.DeserializeObject<ClusterCommand>(json);
 
                 Console.WriteLine($"command received:{command.Command},{command.TargetNode}");

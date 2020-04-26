@@ -70,7 +70,7 @@ namespace LockService
             Task.Run(() =>
             {
                 string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-                data = "test";
+                //data = "test";
                 lock (sync_nodes)
                 {
                     if (Nodes.Count < 1)
