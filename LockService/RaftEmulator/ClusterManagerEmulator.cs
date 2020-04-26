@@ -33,7 +33,7 @@ namespace Raft.RaftEmulator
             for(int i = 0;i< nodesQuantity;i++)
                 eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = 4250 + i });
 
-            List<RaftEntitySettings> list = new List<RaftEntitySettings>();
+            
            
                 re_settings = new RaftEntitySettings()
                 {
@@ -46,8 +46,7 @@ namespace Raft.RaftEmulator
                     //InMemoryEntity = true,
                     //InMemoryEntityStartSyncFromLatestEntity = true
                 };
-                //S:\temp\RaftDbr
-                list.Add(re_settings);
+               
            
                 for (int i = 0; i < nodesQuantity; i++)
             {

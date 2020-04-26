@@ -6,6 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="backup\Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="backup\Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\LockService\LockService.csproj" />
     <ProjectReference Include="..\Raft.Core\Raft.Core.csproj" />
   </ItemGroup>

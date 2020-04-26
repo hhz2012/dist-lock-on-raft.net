@@ -18,10 +18,7 @@ using Raft.Core.Handler;
 
 namespace Raft.Transport
 {
-    public class TcpRaftNode: IDisposable
-#if !NETSTANDARD2_0
-        , IEmulatedNode
-#endif
+    public class TcpRaftNode: IDisposable, IEmulatedNode
     {       
         internal IWarningLog log = null;
         internal int port = 0;

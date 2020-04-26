@@ -276,6 +276,7 @@ namespace Raft.Transport
                 byte[] rbf = new byte[10000];
                 int a = 0;
                 //while ((a = await stream.ReadAsync(rbf, 0, rbf.Length).ConfigureAwait(false)) > 0)
+                if (stream == null) return;
                 while ((a = await stream.ReadAsync(rbf, 0, rbf.Length)) > 0)
                 {
                     _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
