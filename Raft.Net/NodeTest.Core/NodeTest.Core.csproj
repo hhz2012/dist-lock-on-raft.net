@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\LockService\LockService.csproj" />
     <ProjectReference Include="..\Raft.Core\Raft.Core.csproj" />
   </ItemGroup>
 

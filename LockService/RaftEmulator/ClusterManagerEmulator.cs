@@ -181,26 +181,6 @@ namespace Raft.RaftEmulator
            
         }
 
-        ///// <summary>
-        ///// Test method
-        ///// </summary>
-        ///// <param name="nodeId"></param>
-        ///// <param name="stateLogId"></param>
-        ///// <returns></returns>
-        //public bool ContainsStateLogIdData(int nodeId, ulong stateLogId)
-        //{
-        //    IEmulatedNode node = null;
-        //    lock (sync_nodes)
-        //    {
-        //        nodes.TryGetValue(nodeId, out node);
-        //    }
-        //    //var node = nodes.Where(r => r.NodeAddress.NodeAddressId == nodeId).FirstOrDefault();
-        //    if (node == null)
-        //        return false;
-
-        //    return ((RaftNode)node).ContainsStateLogEntryId(stateLogId);
-        //}
-
 
         public void Start(int nodeId)
         {

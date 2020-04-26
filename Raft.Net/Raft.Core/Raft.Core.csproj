@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="RaftEmulator\UdpEmulator.cs" />
     <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
   </ItemGroup>
 
@@ -22,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="RaftEmulator\UdpEmulator.cs" />
     <None Include="Utils\ProtobufSerializatorExtension.cs" />
   </ItemGroup>
 

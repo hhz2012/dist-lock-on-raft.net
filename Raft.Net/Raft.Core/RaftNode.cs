@@ -16,12 +16,9 @@ namespace Raft
     /// <summary>
     /// Main class. Initiate and Run.
     /// </summary>
-    public class RaftNode : IRaftComReceiver,IDisposable
-#if !NETSTANDARD2_0
-        , IEmulatedNode
-#endif
+    public class RaftNode : IRaftComReceiver,IDisposable , IEmulatedNode
     {
-        internal enum eNodeState
+        public enum eNodeState
         {
             Leader,
             Follower,
@@ -50,7 +47,7 @@ namespace Raft
         IWarningLog Log = null;
         object lock_Operations = new object();        
         internal TimeMaster TM = null;
-        internal eNodeState NodeState = eNodeState.Follower;
+        public eNodeState NodeState = eNodeState.Follower;
         
         /// <summary>
         /// 

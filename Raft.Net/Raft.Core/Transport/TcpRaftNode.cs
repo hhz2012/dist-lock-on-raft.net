@@ -283,7 +283,7 @@ namespace Raft.Transport
                 rn.Value.PeerIsDisconnected(endpointsid);
         }
 
-        internal RaftNode GetNodeByEntityName(string entityName)
+        public RaftNode GetNodeByEntityName(string entityName)
         {
             RaftNode rn = null;
             raftNodes.TryGetValue(entityName, out rn);
