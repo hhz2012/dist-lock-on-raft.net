@@ -16,7 +16,7 @@ namespace Raft
     /// <summary>
     /// Main class. Initiate and Run.
     /// </summary>
-    public class RaftNode : IRaftComReceiver,IDisposable , IEmulatedNode
+    public class RaftNode : IRaftComReceiver,IDisposable 
     {
         public enum eNodeState
         {
@@ -168,12 +168,6 @@ namespace Raft
 
             this.NodeStateLog.Dispose();
             this.NodeStateLog = null;
-
-            //if (db != null) //Is supplied from outside
-            //{
-            //    db.Dispose();
-            //    db = null;
-            //}
         }
 
         /// <summary>
@@ -198,8 +192,6 @@ namespace Raft
                 NodesQuantityInTheCluster = nodesQuantityInTheCluster;
             }
         }
-
-
         /// <summary>
         /// Starts the node
         /// </summary>
@@ -250,21 +242,13 @@ namespace Raft
                 RemoveLeaderTimer();
                 RemoveDelayedPersistenceTimer();
                 RemoveNoLeaderAddCommandTimer();
-
-
                 this.NodeState = eNodeState.Follower;
-
                 this.NodeStateLog.LeaderSynchronizationIsActive = false;
                 this.NodeStateLog.FlushSleCache();
-                
-
                 VerbosePrint("Node {0} state is {1}", NodeAddress.NodeAddressId,this.NodeState);
-
                 IsRunning = false;
             }
         }
-
-
         /// <summary>
         /// If this action works, it can mean that Node can give a bid to be the candidate after specified time interval
         /// Starts Election timer only in case if it's not running yet
@@ -286,7 +270,6 @@ namespace Raft
                         return; //Early to elect, we receive completely heartbeat from the leader
 
                     VerbosePrint("Node {0} LeaderHeartbeatTimeout", NodeAddress.NodeAddressId);
-
                     RunElectionTimer();
                 }
             }
@@ -466,7 +449,6 @@ namespace Raft
                 rnd.Next(System.Threading.Thread.CurrentThread.ManagedThreadId);
                 int seed = rnd.Next(entitySettings.ElectionTimeoutMinMs, entitySettings.ElectionTimeoutMaxMs);                
                 Election_TimerId = this.TM.FireEventEach((uint)seed, ElectionTimeout, null, true);
-
                 VerbosePrint("Node {0} RunElectionTimer {1} ms", NodeAddress.NodeAddressId, seed);
             }
         }
@@ -537,7 +519,6 @@ namespace Raft
                 this.NoLeaderAddCommand_TimerId = 0;
             }
         }
-
         void RunLeaderLogResendTimer()
         {
             if (LeaderLogResend_TimerId == 0)
@@ -545,7 +526,6 @@ namespace Raft
                 LeaderLogResend_TimerId = this.TM.FireEventEach(entitySettings.LeaderLogResendIntervalMs, LeaderLogResendTimerElapse, null, true);
             }
         }
-
         void RemoveLeaderLogResendTimer()
         {
             if (this.LeaderLogResend_TimerId > 0)
@@ -554,8 +534,6 @@ namespace Raft
                 this.LeaderLogResend_TimerId = 0;
             }
         }
-
-      
 
         /// <summary>
         /// 
@@ -568,7 +546,6 @@ namespace Raft
                 this.Election_TimerId = 0;
             }
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -581,8 +558,6 @@ namespace Raft
             }
         }
         #endregion
-        
-
         /// <summary>
         /// Only for Leader.
         /// Follower requests new Log Entry Index from the Leader and Leader answers to the Follower
@@ -591,10 +566,8 @@ namespace Raft
         /// <param name="data"></param>
         void ParseStateLogEntryRequest(NodeAddress address, byte[] data)
         {
-          
             if (this.NodeState != eNodeState.Leader)
                 return;
-
             StateLogEntryRequest req = StateLogEntryRequest.BiserDecode(data);//.DeserializeProtobuf<StateLogEntryRequest>();
 
             //Getting suggestion
@@ -610,17 +583,10 @@ namespace Raft
             
         }
 
-
-
-       
-
-
         uint GetMajorityQuantity()
         {
             return (uint)Math.Floor((double)NodesQuantityInTheCluster / 2) + 1;
         }
-
-
         /// <summary>
         /// Only for Follower
         ///  Is called from tryCatch and in lock
@@ -749,7 +715,6 @@ namespace Raft
                 {
                     case eNodeState.Leader:
                         //2 leaders with the same Term
-
                         if (this.NodeTerm > LeaderHeartbeat.LeaderTerm)
                         {
                             //Ignoring
@@ -828,8 +793,6 @@ namespace Raft
                 {
 
                      StateLogEntryId = this.LeaderHeartbeat.LastStateLogCommittedIndex == 0 ? 0 : this.LeaderHeartbeat.LastStateLogCommittedIndex-1                 
-                    //StateLogEntryId = this.LeaderHeartbeat.LastStateLogCommittedIndex == 0 ? 0 : 
-                    //this.LeaderHeartbeat.LastStateLogCommittedIndex - (ulong)(this.LeaderHeartbeat.LastStateLogCommittedIndex > 1 ? 2 : 1)
                 };
             }
             else
@@ -839,9 +802,6 @@ namespace Raft
                     StateLogEntryId = NodeStateLog.LastCommittedIndex                   
                 };
             }
-
-            
-
             this.Sender.SendTo(this.LeaderNodeAddress, eRaftSignalType.StateLogEntryRequest, req.SerializeBiser(), this.NodeAddress, entitySettings.EntityName);
         }
 
@@ -1285,10 +1245,6 @@ namespace Raft
                     
                     try
                     {
-                        ////if (this.LeaderHeartbeat != null)
-                        ////    Console.WriteLine($"LCIT={this.NodeStateLog.LastCommittedIndex}/{this.NodeStateLog.LastBusinessLogicCommittedIndex}/---{this.LeaderHeartbeat.LastStateLogCommittedIndex} ");
-
-
                         if (this.handler.DoAction(entitySettings.EntityName, sle.Index,sle.Data))
                         {
                             //In case if business logic commit was successful
@@ -1296,8 +1252,6 @@ namespace Raft
                             {
                                 this.NodeStateLog.BusinessLogicIsApplied(sle.Index);
                             }
-
-
                             //Notifying Async AddLog
                             if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
                             {
@@ -1328,28 +1282,6 @@ namespace Raft
                     //i++;
                 }
             });            
-        }
-        
-      
-        public void EmulationStop()
-        {
-            this.NodeStop();
-        }
-
-        public void EmulationStart()
-        {
-            this.NodeStart();
-        }
-
-        public void EmulationSendToAll()
-        {
-            //Sender.SendTo(address, eRaftSignalType.VoteOfCandidate, vote.SerializeProtobuf(), this.NodeAddress);
-            Log.Log(new WarningLogEntry() { Description ="not implemented" });
-        }
-
-        public void EmulationSetValue(byte[] data, string entityName="default")
-        {
-            this.AddLogEntry(data);
         }
 
         public void Debug_PrintOutInMemory()
