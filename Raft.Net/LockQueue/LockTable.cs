@@ -23,7 +23,9 @@ namespace LockQueueLib
         public LockQueue GetQueue(string key)
         {
             int hashCode = key.GetHashCode();
+            if (hashCode < 0) hashCode = -hashCode;
             int index = hashCode % size;
+            
             HashEntry entry = table[index];
             do
             {
@@ -34,8 +36,8 @@ namespace LockQueueLib
                     {
                         key = key
                     };
-                    var update=Interlocked.CompareExchange(ref entry.Next, null, newEntry);
-                    if (update == newEntry) return update.queue;
+                    var update=Interlocked.CompareExchange(ref entry.Next,newEntry,null);
+                    if (entry.Next == newEntry) return newEntry.queue;
                     else continue;
                 }else
                 {
@@ -52,7 +54,9 @@ namespace LockQueueLib
     public class HashEntry
     {
         public string key { get; set; }
+       
         public HashEntry Next = null;
+
         public LockQueue queue = new LockQueue();
     }
 }

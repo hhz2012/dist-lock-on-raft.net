@@ -44,5 +44,14 @@ namespace Lock.UnitTest
             queue.Unlock("lock1");
             Assert.AreEqual(queue.Length, 0);
         }
+        [TestMethod]
+        public void TableTest()
+        {
+            LockTable table = new LockTable(10);
+            table.GetQueue("queue1");
+            table.GetQueue("queue2");
+            table.GetQueue("queue3");
+            Assert.IsTrue(true);
+        }
     }
 }

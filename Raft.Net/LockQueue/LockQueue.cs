@@ -11,7 +11,7 @@ namespace LockQueueLib
         public bool LockNoWait(string sessionId, LockType type)
         {
             var item = header;
-            while (item.Type==type&&type!=LockType.Write)
+            while ((item.Type==type&&type!=LockType.Write)||(item==header))
             {
                 if (item.Next==null)
                 {
@@ -23,7 +23,7 @@ namespace LockQueueLib
                     };
                     var oldvalue=Interlocked.CompareExchange(ref item.Next,  newEntry,null);
                     if (item.Next == newEntry) return true;
-                    else continue; //other body take this position
+                    else continue; //other request already take this position
                 }else
                 {
                     item = item.Next;
@@ -53,10 +53,13 @@ namespace LockQueueLib
             {
                 if (item.sessionId==sessionId)
                 {
-                    item.sessionId = string.Empty;
+                    item.InUse = false;
                     if (item==header.Next) //release from header,delete nodes
                     {
                         RemoveFromHead();
+                    }else
+                    {
+                        item = item.Next;
                     }
                 }else
                 {
@@ -72,7 +75,7 @@ namespace LockQueueLib
             while (item.Next!=null)
             {
                 var emptyNode = item.Next;
-                if (emptyNode.sessionId == string.Empty) //check passed
+                if (!emptyNode.InUse) //check passed
                 {
                     //start to remove this node
                     var nextnext = emptyNode.Next;
@@ -100,6 +103,8 @@ namespace LockQueueLib
     {
         public string sessionId { get; set; }
         public LockType Type { get; set; }
+        public bool InUse { get; set; } = true;
+
         public LockEntry Next  = null;
     }
     public enum LockType
