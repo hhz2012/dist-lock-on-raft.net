@@ -2,6 +2,7 @@
 using DBreeze;
 using DBreeze.Utils;
 using Raft;
+using Raft.Core.RaftEmulator;
 using Raft.Transport;
 
 namespace NodeTest.Core
@@ -140,11 +141,11 @@ namespace NodeTest.Core
             //    (entName, index, data) => { Console.WriteLine($"wow committed {entName}/{index}"); return true; });
 
             rn = TcpRaftNode.GetFromConfig(System.IO.File.ReadAllText(args[2]),
-               dbreezePath, Convert.ToInt32(args[1]), log,
-               (entName, index, data,node) => {
-                   Console.WriteLine($"wow committed {entName}/{index}; DataLen: {(data == null ? -1 : data.Length)};");
-                   return true; 
-               });
+               dbreezePath, 
+               Convert.ToInt32(args[1]),
+               log,
+               new DefaultHandler()
+               );
 
 
 

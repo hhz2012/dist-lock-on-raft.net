@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DBreeze;
 using DBreeze.Utils;
+using Raft.Core.Handler;
 
 namespace Raft
 {
@@ -120,8 +121,8 @@ namespace Raft
         /// <summary>
         /// Supplied via constructor. Will be called and supply
         /// </summary>
-        Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
-
+        //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
+        IActionHandler handler;
         internal DBreezeEngine db;
         public string NodeName { get; set; }
 
@@ -133,11 +134,12 @@ namespace Raft
         /// <param name="raftSender"></param>
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
-        public RaftNode(RaftEntitySettings settings, DBreezeEngine dbEngine, IRaftComSender raftSender, IWarningLog log, Func<string, ulong, byte[],RaftNode, bool> OnCommit)
+        public RaftNode(RaftEntitySettings settings, DBreezeEngine dbEngine, IRaftComSender raftSender, IWarningLog log, IActionHandler handler)
         {
 
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
-            this.OnCommit = OnCommit ?? throw new Exception("Raft.Net: OnCommit can'T be null");
+            this.handler = handler;
+            this.handler.SetNode(this);
             this.db = dbEngine;
                         
             Sender = raftSender;
@@ -1290,7 +1292,7 @@ namespace Raft
                         ////    Console.WriteLine($"LCIT={this.NodeStateLog.LastCommittedIndex}/{this.NodeStateLog.LastBusinessLogicCommittedIndex}/---{this.LeaderHeartbeat.LastStateLogCommittedIndex} ");
 
 
-                        if (this.OnCommit(entitySettings.EntityName, sle.Index, sle.Data,this))
+                        if (this.handler.DoAction(entitySettings.EntityName, sle.Index,sle.Data))
                         {
                             //In case if business logic commit was successful
                             lock (lock_Operations)

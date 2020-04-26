@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 
 using DBreeze;
 using DBreeze.Utils;
+using Raft.Core.Handler;
 
 namespace Raft.Transport
 {
@@ -42,7 +43,7 @@ namespace Raft.Transport
 
         //public TcpRaftNode(List<TcpClusterEndPoint> clusterEndPoints, List<RaftNodeSettings> raftNodes, string dbreezePath, Func<string, ulong, byte[], bool> OnCommit, int port = 4250,  IWarningLog log = null)
         //public TcpRaftNode(List<TcpClusterEndPoint> clusterEndPoints, List<RaftEntitySettings> raftNodes, string dbreezePath, Func<string, ulong, byte[], bool> OnCommit, int port = 4250, IWarningLog log = null)
-        public TcpRaftNode(NodeSettings nodeSettings, string dbreezePath, Func<string, ulong, byte[], RaftNode,bool> OnCommit, int port = 4250, string nodeName="default", IWarningLog log = null)
+        public TcpRaftNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
                 nodeSettings = new NodeSettings();
@@ -111,7 +112,7 @@ namespace Raft.Transport
                 if (this.raftNodes.ContainsKey(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
-                var rn = new RaftNode(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, OnCommit);
+                var rn = new RaftNode(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, handler);
              
 #if DEBUG
                 rn.Verbose = re_settings.VerboseRaft;          //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   DEBUG PURPOSES
@@ -151,7 +152,7 @@ namespace Raft.Transport
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
         /// <returns></returns>
-        public static TcpRaftNode GetFromConfig(string jsonConfiguration, string dbreezePath, int port, IWarningLog log, Func<string, ulong, byte[],RaftNode, bool> OnCommit)
+        public static TcpRaftNode GetFromConfig(string jsonConfiguration, string dbreezePath, int port, IWarningLog log, IActionHandler handler)
         {
             try
             {
@@ -166,7 +167,7 @@ namespace Raft.Transport
                 //encc = new Biser.JsonEncoder(nhz);
                 //str = encc.GetJSON(Biser.JsonSettings.JsonStringStyle.Prettify);
 
-                rn = new TcpRaftNode(ns, dbreezePath, OnCommit, port, null,log);
+                rn = new TcpRaftNode(ns, dbreezePath, handler, port, null,log);
                 return rn;
             }
             catch (Exception ex)
@@ -178,7 +179,7 @@ namespace Raft.Transport
         }
 
         [Obsolete("Use GetFromConfig supplying JSON configuration instead")]
-        public static TcpRaftNode GetFromConfig(int configVersion, string configuration, string dbreezePath, int port, IWarningLog log, Func<string, ulong, byte[],RaftNode, bool> OnCommit)
+        public static TcpRaftNode GetFromConfig(int configVersion, string configuration, string dbreezePath, int port, IWarningLog log, IActionHandler handler)
         {
             //Setip for configVersion=1
             try
@@ -261,7 +262,7 @@ namespace Raft.Transport
 
                
                 rn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = reSettings }, dbreezePath,
-                    OnCommit,
+                    handler,
                     port, null,log);
 
                 return rn;         
