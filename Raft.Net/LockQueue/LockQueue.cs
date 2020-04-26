@@ -28,6 +28,50 @@ namespace LockQueue
             };
             return false;
         }
+        public bool Unlock(string sessionId)
+        {
+            var item = header;
+            do
+            {
+                if (item.sessionId==sessionId)
+                {
+                    item.sessionId = string.Empty;
+                    if (item==header.Next) //release from header,delete nodes
+                    {
+                        RemoveFromHead();
+                    }
+                }
+
+            } while (item.Next != null);
+            return true;
+        }
+        public bool RemoveFromHead()
+        {
+            var item = header;
+            while (item.Next!=null)
+            {
+                var emptyNode = item.Next;
+                if (emptyNode.sessionId==string.Empty) //check passed
+                {
+                    //start to remove this node
+                    var nextnext = emptyNode.Next;
+                    var updated=Interlocked.CompareExchange(ref emptyNode.Next, nextnext, null);
+                    if (updated==null) //update success
+                    {
+                        var remove=Interlocked.CompareExchange(ref item.Next, emptyNode, nextnext);
+                        if (remove==nextnext) //
+                        {
+                            if (nextnext == null) return true;
+                            else continue;
+                        }else
+                        {
+                            //unexpected error happened
+                        }
+                    }
+                }
+            }
+            return true;
+        }
     }
     public class LockEntry
     {
