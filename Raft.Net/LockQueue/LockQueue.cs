@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-namespace LockQueue
+namespace LockQueueLib
 {
     public class LockQueue
     {
@@ -11,9 +11,9 @@ namespace LockQueue
         public bool LockNoWait(string sessionId, LockType type)
         {
             var item = header;
-            while (header.Type==type&&type!=LockType.Write)
+            while (item.Type==type&&type!=LockType.Write)
             {
-                if (header.Next==null)
+                if (item.Next==null)
                 {
                     //find tail 
                     LockEntry newEntry = new LockEntry()
@@ -21,12 +21,30 @@ namespace LockQueue
                         sessionId = sessionId,
                         Type = type
                     };
-                    var update=Interlocked.CompareExchange(ref header.Next, null, newEntry);
-                    if (update == newEntry) return true;
+                    var oldvalue=Interlocked.CompareExchange(ref item.Next,  newEntry,null);
+                    if (item.Next == newEntry) return true;
                     else continue; //other body take this position
+                }else
+                {
+                    item = item.Next;
                 }
             };
             return false;
+        }
+        public int Length
+        {
+            get
+            {
+                var item = header.Next;
+                int length = 0;
+                while (item != null) 
+                {
+                    length++;
+                    item = item.Next;
+                    if (item == null) break;
+                } 
+                return length;
+            }
         }
         public bool Unlock(string sessionId)
         {
@@ -40,9 +58,12 @@ namespace LockQueue
                     {
                         RemoveFromHead();
                     }
+                }else
+                {
+                    item = item.Next;
                 }
 
-            } while (item.Next != null);
+            } while (item!= null);
             return true;
         }
         public bool RemoveFromHead()
@@ -51,24 +72,26 @@ namespace LockQueue
             while (item.Next!=null)
             {
                 var emptyNode = item.Next;
-                if (emptyNode.sessionId==string.Empty) //check passed
+                if (emptyNode.sessionId == string.Empty) //check passed
                 {
                     //start to remove this node
                     var nextnext = emptyNode.Next;
-                    var updated=Interlocked.CompareExchange(ref emptyNode.Next, nextnext, null);
-                    if (updated==null) //update success
+                    var updated = Interlocked.CompareExchange(ref emptyNode.Next, null, nextnext);
+                    if (emptyNode.Next == null) //update success
                     {
-                        var remove=Interlocked.CompareExchange(ref item.Next, emptyNode, nextnext);
-                        if (remove==nextnext) //
+                        var remove = Interlocked.CompareExchange(ref item.Next, nextnext, emptyNode);
+                        if (item.Next == nextnext) //
                         {
                             if (nextnext == null) return true;
                             else continue;
-                        }else
+                        }
+                        else
                         {
                             //unexpected error happened
                         }
                     }
                 }
+                else break;
             }
             return true;
         }

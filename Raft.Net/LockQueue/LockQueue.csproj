@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyName>LockQueueLib</AssemblyName>
+    <RootNamespace>LockQueueLib</RootNamespace>
   </PropertyGroup>
 
 </Project>

@@ -8,7 +8,7 @@
       "version": "1.0.0",
       "restore": {
         "projectUniqueName": "D:\\mywork\\myproj\\distlock\\Raft.Net\\LockQueue\\LockQueue.csproj",
-        "projectName": "LockQueue",
+        "projectName": "LockQueueLib",
         "projectPath": "D:\\mywork\\myproj\\distlock\\Raft.Net\\LockQueue\\LockQueue.csproj",
         "packagesPath": "C:\\Users\\wuzhonghua\\.nuget\\packages\\",
         "outputPath": "D:\\mywork\\myproj\\distlock\\Raft.Net\\LockQueue\\obj\\",

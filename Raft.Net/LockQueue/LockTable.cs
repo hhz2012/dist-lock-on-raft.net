@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-namespace LockQueue
+namespace LockQueueLib
 {
     public class LockTable
     {
