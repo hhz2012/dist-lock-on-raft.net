@@ -2,6 +2,7 @@
   Copyright (C) 2018 tiesky.com / Alex Solovyov
   It's a free software for those, who think that it should be free.
 */
+using Raft.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,9 +21,7 @@ namespace Raft.Transport
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
-
         internal TcpRaftNode trn = null;
-
         public TcpSpider(TcpRaftNode trn)
         {
             this.trn = trn;          
@@ -32,7 +31,6 @@ namespace Raft.Transport
         {   
             var p = new TcpPeer(peer, trn);           
         }
-
         public void RemoveAll()
         {
             var lst = Peers.ToList();
@@ -79,23 +77,7 @@ namespace Raft.Transport
             _sync.EnterWriteLock();
             try
             {
-                //if (peer == null || peer.Handshake == null)
-                //    return;
-
-                //trn.log.Log(new WarningLogEntry()
-                //{
-                //    LogType = WarningLogEntry.eLogType.DEBUG,
-                //    Description = $"{trn.port} ({trn.rn.NodeState})> removing EP: {endpointsid}; Peers: {Peers.Count}"
-                //});
-
                 Peers.Remove(endpointsid);
-
-                //trn.log.Log(new WarningLogEntry()
-                //{
-                //    LogType = WarningLogEntry.eLogType.DEBUG,
-                //    Description = $"{trn.port} ({trn.rn.NodeState})> removed EP: {endpointsid}; Peers: {Peers.Count}"
-                //});
-                
             }
             catch (Exception ex)
             {
@@ -127,28 +109,8 @@ namespace Raft.Transport
                 //Choosing priority connection
                 if (!Peers.ContainsKey(peer.EndPointSID))
                 {                 
-
-                    if(handshake && trn.GetNodeByEntityName("default").NodeAddress.NodeUId > peer.Handshake.NodeUID)
-                    {
-                        //trn.log.Log(new WarningLogEntry()
-                        //{
-                        //    LogType = WarningLogEntry.eLogType.DEBUG,
-                        //    Description = $"{trn.port}> !!!!!dropped{peer.Handshake.NodeListeningPort} {peer.Handshake.NodeListeningPort} on handshake as weak"
-                        //});
-
-                        
-                        peer.Dispose(true);
-                        return;
-                    }
-
                     Peers[peer.EndPointSID] = peer;
                     peer.FillNodeAddress();
-
-                    //trn.log.Log(new WarningLogEntry()
-                    //{
-                    //    LogType = WarningLogEntry.eLogType.DEBUG,
-                    //    Description = $"{trn.port}> >>>>>>connected{peer.Handshake.NodeListeningPort}  {peer.Handshake.NodeListeningPort} by {(handshake ? "handshake" : "ACK")} with diff: {(trn.rn.NodeAddress.NodeUId - peer.Handshake.NodeUID)}"
-                    //});
 
                     if (handshake)
                     {
@@ -167,14 +129,6 @@ namespace Raft.Transport
                 }
                 else
                 {
-                    //trn.log.Log(new WarningLogEntry()
-                    //{
-                    //    LogType = WarningLogEntry.eLogType.DEBUG,
-                    //    Description = $"{trn.port}> !!!!!dropped{peer.Handshake.NodeListeningPort} {peer.Handshake.NodeListeningPort} as existing"
-                    //});
-
-                    //Sending ping on existing connection (may be it is alredy old)
-                   
                     Peers[peer.EndPointSID].Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 05 }, null)); //ping
 
                     //removing incoming connection                    
@@ -199,7 +153,11 @@ namespace Raft.Transport
             await HandshakeTo(trn.NodeSettings.TcpClusterEndPoints);
             trn.GetNodeByEntityName("default").TM.FireEventEach(3000, RetestConnections, null, false);
         }
-
+        public bool IsMe(TcpClusterEndPoint endPoint)
+        {
+            if (this.trn.port == endPoint.Port) return true;
+            return false;
+        }
         async Task HandshakeTo(List<TcpClusterEndPoint> clusterEndPoints)        
         {
             foreach (var el in clusterEndPoints)
@@ -207,26 +165,32 @@ namespace Raft.Transport
                 try
                 {
                     TcpClient cl = new TcpClient();
-                    await cl.ConnectAsync(el.Host, el.Port);
                     
+                    if (this.IsMe(el))
+                    {
+                        continue;
+                    }
+                    await cl.ConnectAsync(el.Host, el.Port);
+
+                  
                     el.Peer = new TcpPeer(cl, trn);
 
-                    //trn.log.Log(new WarningLogEntry()
-                    //{
-                    //    LogType = WarningLogEntry.eLogType.DEBUG,                        
-                    //    Description = $"{trn.port}> try connect {el.Host}:{el.Port}"
-                    //});
-
-                    
                     el.Peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 01 }, (new TcpMsgHandshake()                    
                     {
                         NodeListeningPort = trn.port,
                         NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
-                    }).SerializeBiser()));
+                      
+                     }).SerializeBiser()));
+
+                    if (GlobalConfig.DebugNetwork)
+                    {
+                        var localname = this.trn.nodeName;
+                        Console.WriteLine($" send handshake from {localname} to {el.Port}");
+                    }
                 }
                 catch (Exception ex)
                 {
-
+                    Console.WriteLine($"  handshake eror"+ex.Message);
                 }
             }
         }

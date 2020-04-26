@@ -578,13 +578,6 @@ namespace Raft
                         if (trow != null && trow.Exists)
                             sle = StateLogEntry.BiserDecode(trow.Value);
                     }
-
-
-                    //else
-                    //{
-                    //    //should not normally happen
-                    //}
-
                     if (sle != null)
                     {
                         le.StateLogEntry = sle;

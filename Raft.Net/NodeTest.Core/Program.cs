@@ -19,9 +19,15 @@ namespace NodeTest.Core
         static void Main(string[] args)
         {
             var cluster = new LockClusterManager();
-            cluster.StartControlNodes(5);
+            cluster.StartControlNodes(3);
             Console.ReadLine();
-            cluster.TestSendData("hello");
+            cluster.TestSendData(
+                new ClusterCommand()
+                {
+                     Command="Hello",
+                     TargetNode="all"
+                }
+                );
 
             Console.ReadLine();
         }

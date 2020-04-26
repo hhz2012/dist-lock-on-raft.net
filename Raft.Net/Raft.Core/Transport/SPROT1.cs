@@ -412,14 +412,14 @@ namespace Raft.Transport
 
                 this.newPacket = false;
 
-                if (this.newPacketSize > this._maxPayLoad || this.newPacketSize < 0)
-                {
-                    //if (this.DestroySelf != null)
-                    //    this.DestroySelf();
-                    this.DestroySelf?.Invoke();
+                //if (this.newPacketSize > this._maxPayLoad || this.newPacketSize < 0)
+                //{
+                //    //if (this.DestroySelf != null)
+                //    //    this.DestroySelf();
+                //    this.DestroySelf?.Invoke();
 
-                    return;
-                }
+                //    return;
+                //}
 
                 //this.cutOff = this.newPacketSize + 6;
                 workingArray = new byte[this.newPacketSize];

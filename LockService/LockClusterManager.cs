@@ -19,23 +19,31 @@ namespace LockService
         {
             return CurrentPort++;
         }
-        public void StartControlNodes(int num)
+        public async Task StartControlNodes(int num)
         {
             //create 
             LockSeriveControlNode trn = null;
-            List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
+            
             RaftEntitySettings re_settings = null;
+            List<int> ipAddress = new List<int>();
             for (int i = 0; i < num; i++)
-                eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = GetPort() });
-
+            {
+                ipAddress.Add(GetPort());
+            }
             re_settings = new RaftEntitySettings()
             {
                 VerboseRaft = true,
-                VerboseTransport = false,
+                VerboseTransport = true,
                 DelayedPersistenceIsActive = true,
             };
+            List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
             for (int i = 0; i < num; i++)
             {
+                List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
+                //every node have seperate configuration
+                for (int index = 0; index < num; index++)
+                    eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
+
                 lock (sync_nodes)
                 {
                     int Port = eps[i].Port;
@@ -48,14 +56,21 @@ namespace LockService
                     this.Nodes.Add(trn);
 
                 }
+                nodes.Add(trn);
                 trn.Start();
                 System.Threading.Thread.Sleep((new Random()).Next(30, 350));
             }
+            for (int i=0;i<num;i++)
+            {
+                await nodes[i].StartConnect();
+            }
         }
-        public void TestSendData(string data)
+        public void TestSendData(ClusterCommand command)
         {
             Task.Run(() =>
             {
+                string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+                data = "test";
                 lock (sync_nodes)
                 {
                     if (Nodes.Count < 1)

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using DBreeze;
@@ -24,10 +25,7 @@ namespace Raft.Transport
         internal int port = 0;
         internal Dictionary<string, RaftNode> raftNodes = new Dictionary<string, RaftNode>();
         internal TcpSpider spider = null;
-        //internal List<TcpClusterEndPoint> clusterEndPoints = new List<TcpClusterEndPoint>();  //init clusterEndPoints creating 1-N connection
-
         internal DBreezeEngine dbEngine;
-
         internal NodeSettings NodeSettings = null;
         internal string nodeName;
         public string NodeName
@@ -38,8 +36,6 @@ namespace Raft.Transport
             }
         }
 
-        //public TcpRaftNode(List<TcpClusterEndPoint> clusterEndPoints, List<RaftNodeSettings> raftNodes, string dbreezePath, Func<string, ulong, byte[], bool> OnCommit, int port = 4250,  IWarningLog log = null)
-        //public TcpRaftNode(List<TcpClusterEndPoint> clusterEndPoints, List<RaftEntitySettings> raftNodes, string dbreezePath, Func<string, ulong, byte[], bool> OnCommit, int port = 4250, IWarningLog log = null)
         public TcpRaftNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
@@ -62,27 +58,10 @@ namespace Raft.Transport
             {
                 conf.Storage = DBreezeConfiguration.eStorage.DISK;
             }
-            
-
-            //conf = new DBreezeConfiguration()
-            //{
-            //    DBreezeDataFolderName = dbreezePath,
-            //    Storage = DBreezeConfiguration.eStorage.DISK,
-            //};
             conf.AlternativeTablesLocations.Add("mem_*", String.Empty);
 
             dbEngine = new DBreezeEngine(conf);
 
-           
-            //if (clusterEndPoints != null)
-            //{
-            //    var bt = clusterEndPoints.SerializeBiser();
-            //    var decoder = new Biser.Decoder(bt);
-            //    this.clusterEndPoints = new List<TcpClusterEndPoint>();
-            //    decoder.GetCollection(() => { return TcpClusterEndPoint.BiserDecode(extDecoder: decoder); }, this.clusterEndPoints, false);
-
-            //    //this.clusterEndPoints.AddRange(clusterEndPoints.SerializeProtobuf().DeserializeProtobuf<List<TcpClusterEndPoint>>());
-            //}
             spider = new TcpSpider(this);
 
             //bool firstNode = true;
@@ -97,11 +76,6 @@ namespace Raft.Transport
 
             foreach (var re_settings in this.NodeSettings.RaftEntitiesSettings)
             {
-                //if (firstNode)
-                //{
-                //    re_settings.EntityName = "default";
-                //    firstNode = false;
-                //}
 
                 if (String.IsNullOrEmpty(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
@@ -111,10 +85,8 @@ namespace Raft.Transport
 
                 var rn = new RaftNode(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, handler);
              
-#if DEBUG
-                rn.Verbose = re_settings.VerboseRaft;          //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   DEBUG PURPOSES
-#endif
-                rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);             //!!!!!!!!!!!!  ENABLE 1 for debug, make it dynamic (but not less then 3 if not DEBUG)
+                rn.Verbose = re_settings.VerboseRaft;       
+                rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
                 rn.NodeAddress.NodeAddressId = port; //for debug/emulation purposes
 
                 rn.NodeAddress.NodeUId = Guid.NewGuid().ToByteArray().Substring(8, 8).To_Int64_BigEndian();
@@ -174,106 +146,6 @@ namespace Raft.Transport
             }
             return null;
         }
-
-        [Obsolete("Use GetFromConfig supplying JSON configuration instead")]
-        public static TcpRaftNode GetFromConfig(int configVersion, string configuration, string dbreezePath, int port, IWarningLog log, IActionHandler handler)
-        {
-            //Setip for configVersion=1
-            try
-            {
-                TcpRaftNode rn = null;
-                                
-
-                var re_settings = new RaftEntitySettings()
-                {
-                    EntityName = "default",
-                    VerboseRaft = false,
-                    VerboseTransport = false
-                };
-
-                string[] sev;
-                List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
-
-                List<RaftEntitySettings> reSettings = new List<RaftEntitySettings>();
-                string entityName = "";
-
-                StringReader strReader = new StringReader(configuration);
-                                
-                while(true)
-                {
-                    var el = strReader.ReadLine();
-                    if (el == null)
-                        break;
-
-                    var se = el.Split(new char[] { ':' });
-                    if (se.Length < 2)
-                        continue;
-                    switch (se[0].Trim().ToLower())
-                    {
-                        case "endpoint":
-                            sev = se[1].Split(new char[] { ',' });
-                            eps.Add(new TcpClusterEndPoint() { Host = sev[0].Trim(), Port = Convert.ToInt32(sev[1].Trim()) });
-                            break;
-                        //case "dbreeze":
-                        //    dbreeze = String.Join(":",se.Skip(1));
-                        //    break;
-                        case "entity":
-                            entityName = se[1].Trim();
-                            if (entityName.ToLower().Equals("default"))
-                                continue;
-                            //flushing default entity and starting new one
-                            if (String.IsNullOrEmpty(entityName))
-                                throw new Exception("Raft.Net: configuration entity name must not be empty and must be unique among other entities");
-                            reSettings.Add(re_settings);
-                            re_settings = new RaftEntitySettings { EntityName = entityName };
-                            break;
-                        case "verboseraft":
-                            if (se[1].Trim().ToLower().Equals("true"))
-                                re_settings.VerboseRaft = true;
-                            break;
-                        case "verbosetransport":
-                            if (se[1].Trim().ToLower().Equals("true"))
-                                re_settings.VerboseTransport = true;
-                            break;
-                        case "delayedpersistenceisactive":
-                            if (se[1].Trim().ToLower().Equals("true"))
-                                re_settings.DelayedPersistenceIsActive = true;
-                            break;
-                        case "delayedpersistencems":
-                            re_settings.DelayedPersistenceMs = Convert.ToUInt32(se[1].Trim());
-                            break;
-                        case "inmemoryentity":
-                            if (se[1].Trim().ToLower().Equals("true"))
-                                re_settings.InMemoryEntity = true;
-                            break;
-                        case "inmemoryentitystartsyncfromlatestentity":
-                            if (se[1].Trim().ToLower().Equals("true"))
-                                re_settings.InMemoryEntityStartSyncFromLatestEntity = true;
-                            break;
-
-
-                    }//DelayedPersistenceMs
-                }
-
-                reSettings.Add(re_settings);
-
-               
-                rn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = reSettings }, dbreezePath,
-                    handler,
-                    port, null,log);
-
-                return rn;         
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-
-        
-
-
-
         internal void PeerIsDisconnected(string endpointsid)
         {
             foreach(var rn in this.raftNodes)
@@ -298,18 +170,23 @@ namespace Raft.Transport
 
         public void Start()
         {
-            Task.Run(async () => {
-                StartTcpListener();
-                await spider.Handshake(); 
-            });
+            new Thread(new ThreadStart(StartTcpListener)).Start();
+            Task.Delay(1000);
+
             
         }
-
-       
+        public async Task StartConnect()
+        {
+            await spider.Handshake();
+        }
 
         TcpListener server = null;
-        async Task StartTcpListener()
+        void StartTcpListener()
         {
+            DoTcpServer();
+        }
+        public async void DoTcpServer()
+        { 
             try
             {
                 if(server == null)
@@ -326,8 +203,6 @@ namespace Raft.Transport
                     var peer = await server.AcceptTcpClientAsync();//.ConfigureAwait(false);
                     spider.AddTcpClient(peer);
                 }
-
-
             }
             catch (Exception ex)
             {
@@ -336,17 +211,7 @@ namespace Raft.Transport
             }
         }
 
-        public void EmulationSendToAll()
-        {
-            spider.SendToAllFreeMessage("test");
-        }
-
-        public void EmulationSetValue(byte[] data, string entityName="default")
-        {
-            RaftNode rn = null;
-            if(this.raftNodes.TryGetValue(entityName, out rn))
-                rn.AddLogEntry(data);          
-        }
+     
 
 
         public bool NodeIsInLatestState(string entityName = "default")
@@ -408,18 +273,12 @@ namespace Raft.Transport
 
                         break;
                     default:
-                    //case AddLogEntryResult.eAddLogEntryResult.ERROR_OCCURED:
-                    //case AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET:
-
                         resp.Dispose_MRE();
                         AsyncResponseHandler.df.TryRemove(msgIdStr, out resp);
 
                         return false;
                 }
             }
-
-            //return new AddLogEntryResult { AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_FOUND_BY_NAME };
-            //return new Tuple<bool, byte[]>(false, null);
             return false;
         }
 
@@ -439,6 +298,7 @@ namespace Raft.Transport
             {
                 if (server != null)
                 {
+                    Console.WriteLine("server stop");
                     server.Stop();
                     server = null;
                 }

@@ -257,9 +257,7 @@ namespace Raft.RaftEmulator
             {
                 nodes.TryGetValue(nodeId, out node);
             }
-            //var node = nodes.Where(r => r.NodeAddress.NodeAddressId == nodeId).FirstOrDefault();
-            if (node != null)
-                node.EmulationSendToAll();
+          
         }
         public List<ShardEmulator> Shards { get; set; } = new List<ShardEmulator>();
 

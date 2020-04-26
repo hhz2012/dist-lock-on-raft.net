@@ -4,6 +4,7 @@ using Raft.Transport;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LockService
 {
@@ -23,6 +24,10 @@ namespace LockService
         public void Start()
         {
             trn.Start();
+        }
+        public async Task StartConnect()
+        {
+            await trn.StartConnect();
         }
         public TcpRaftNode InnerNode
         {

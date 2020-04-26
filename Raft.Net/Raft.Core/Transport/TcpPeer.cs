@@ -34,14 +34,15 @@ namespace Raft.Transport
             }
             catch (Exception ex)
             {
+                Console.WriteLine("can't connect to peer");
                 return;
             }
 
             trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) => 
             {
-
-                if (Handshake == null)
-                    this.Dispose();
+                //don't know why
+                //if (Handshake == null)
+                    //this.Dispose();
 
             }, null, true);
                         
@@ -275,24 +276,21 @@ namespace Raft.Transport
                 //Example of pure tcp
                 byte[] rbf = new byte[10000];
                 int a = 0;
-                //while ((a = await stream.ReadAsync(rbf, 0, rbf.Length).ConfigureAwait(false)) > 0)
-                if (stream == null) return;
+                if (stream==null)
+                {
+                    Console.WriteLine("stream null");
+                }
                 while ((a = await stream.ReadAsync(rbf, 0, rbf.Length)) > 0)
                 {
                     _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
                     _sprot1.PacketAnalizator(false);
-                    //Console.WriteLine(a);
                 }
-
-                //trn.log.Log(new WarningLogEntry()
-                //{
-                //    LogType = WarningLogEntry.eLogType.DEBUG,
-                //    Description = $"{trn.port} ({trn.rn.NodeState})> finished Read of {((na == null) ? "unknown" : na.NodeAddressId.ToString() )}"
-                //});
+             
             }
             catch (System.Exception ex)
             {
-                //Fires when remote client drops connection //Null reference              
+                //Fires when remote client drops connection //Null reference  
+                Console.WriteLine(" error in tcp peer:" + ex.Message);
                 Dispose();
             }
 
@@ -347,6 +345,7 @@ namespace Raft.Transport
             {                
                 if (_client != null)
                 {
+                    Console.WriteLine("client dispose");
                     (_client as IDisposable).Dispose();
                     _client = null;
                 }
@@ -367,18 +366,8 @@ namespace Raft.Transport
             catch (Exception)
             { }
 
-            //trn.log.Log(new WarningLogEntry()
-            //{
-            //    LogType = WarningLogEntry.eLogType.DEBUG,
-            //    //Description = $"{trn.port}> try connect {el.Host}:{el.Port} - {el.InternalNodeSID}"
-            //    Description = $"{trn.port}> disposing {(Handshake == null ? "unknown" : Handshake.NodeListeningPort.ToString())} {(DontRemoveFromSpider ? " SPIDER NO REMOVE" : "") }"
-            //});
-
             if(!DontRemoveFromSpider && endpoint != null)
                 trn.spider.RemovePeerFromClusterEndPoints(endpoint);
-
-
-
             //-------------  Last line
             if (!calledFromDispose)
                 Dispose();
