@@ -55,7 +55,7 @@ namespace Raft.RaftEmulator
                     var nodeName = "entity" + (i + 1);
                     trn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings =  new List<RaftEntitySettings>() { re_settings } }
                     , @"D:\Temp\RaftDBreeze\node" + (4250 + i),
-                      new ClusterHandler(),
+                      new ClusterManagerHandler(),
                         4250 + i, nodeName, this);
 
                     //rn = new TcpRaftNode(eps, @"S:\temp\RaftDbr\node" + (4250 + i), 4250 + i,

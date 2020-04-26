@@ -11,12 +11,15 @@ namespace LockService
     public class LockSeriveControlNode
     {
         TcpRaftNode trn = null;
+        string nodeName = null;
+        IWarningLog logger = null;
         public LockSeriveControlNode(string nodeName, NodeSettings setting,int Port,string localPath,IWarningLog logger)
         {
-            
+            this.nodeName = nodeName;
+            this.logger = logger;
             trn = new TcpRaftNode(setting,
                                  localPath,              
-                                 new ClusterHandler(),
+                                 new ClusterManagerHandler(),
                                  Port,
                                  nodeName+"_Control",
                                  logger);
@@ -35,6 +38,50 @@ namespace LockService
             {
                 return this.trn;
             }
+        }
+        public void JoinShard(ClusterCommand command)
+        {
+            //create a node from name and start the network
+
+        }
+        public async Task StartWorkNode(ClusterCommand command)
+        {
+            //create 
+            RaftEntitySettings re_settings = null;
+            List<int> ipAddress = new List<int>();
+            for (int i = 0; i < command.IpAddress.Count; i++)
+            {
+                ipAddress.Add(command.IpAddress[i].port);
+            }
+            re_settings = new RaftEntitySettings()
+            {
+                VerboseRaft = true,
+                VerboseTransport = true,
+                DelayedPersistenceIsActive = true,
+            };
+            List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
+            List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
+            //every node have seperate configuration
+            var order = command.Targets.IndexOf(this.nodeName);
+            for (int index = 0; index < command.IpAddress.Count; index++)
+                    eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
+            int Port = eps[order].Port;
+            var nodeName = this.nodeName + "_worker";
+            var wrk=new TcpRaftNode(
+                                   new NodeSettings()
+                                   {
+                                       TcpClusterEndPoints = eps,
+                                       RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings }
+                                   },
+                                  LockClusterManager.PathRoot+nodeName,
+                                  new WorkerHandler(),
+                                  Port,
+                                  nodeName + "_Control",
+                                  logger);
+            trn.Start();
+            await Task.Delay(2000);
+            await trn.StartConnect();
+            
         }
     }
 }

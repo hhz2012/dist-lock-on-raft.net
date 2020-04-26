@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Raft.Core.RaftEmulator
 {
-    public class ShardHandler : ActionHandlerBase
+    public class WorkerHandler : ActionHandlerBase
     {
         public override bool DoAction(string entityName, ulong index, byte[] data)
         {

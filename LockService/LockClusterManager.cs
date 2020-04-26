@@ -11,6 +11,7 @@ namespace LockService
 {
     public class LockClusterManager
     {
+        public static string PathRoot=@"D:\Temp\RaftDBreeze\node\";
         object sync_nodes = new object();
         public List<LockSeriveControlNode> Nodes { get; set; } = new List<LockSeriveControlNode>();
         public static int CurrentPort = 10000;
@@ -52,7 +53,7 @@ namespace LockService
                         new NodeSettings() { TcpClusterEndPoints = eps,
                                              RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings } },
                         Port
-                        ,@"D:\Temp\RaftDBreeze\node\" + nodeName, log);
+                        , PathRoot+ nodeName, log);
                     this.Nodes.Add(trn);
 
                 }
@@ -82,6 +83,26 @@ namespace LockService
                             return;
 
                         ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                }
+            });
+        }
+        public void TestSubCluster(ClusterCommand command)
+        {
+            Task.Run(() =>
+            {
+                string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+                //data = "test";
+                lock (sync_nodes)
+                {
+                    if (Nodes.Count < 1)
+                        return;
+                    var leader = Nodes.Where(r => ((TcpRaftNode)r.InnerNode).IsLeader())
+                    .Select(r => (TcpRaftNode)r.InnerNode).FirstOrDefault();
+
+                    if (leader == null)
+                        return;
+
+                    ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
