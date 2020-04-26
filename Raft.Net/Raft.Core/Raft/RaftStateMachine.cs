@@ -121,7 +121,6 @@ namespace Raft
         /// </summary>
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
         IActionHandler handler;
-        //internal DBreezeEngine db;
         public string NodeName { get; set; }
 
         /// <summary>
@@ -138,8 +137,6 @@ namespace Raft
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
             this.handler = handler;
             this.handler.SetNode(this);
-            //this.db = dbEngine;
-                        
             Sender = raftSender;
             entitySettings = settings;           
 
@@ -209,13 +206,8 @@ namespace Raft
                 VerbosePrint("Node {0} has started.", NodeAddress.NodeAddressId);
                 //In the beginning node is Follower
                 SetNodeFollower();
-
                 IsRunning = true;
-
-                if(entitySettings.DelayedPersistenceIsActive)
-                    RunDelayedPersistenceTimer();
             }
-
             //Tries to executed not yet applied by business logic entries
             Commited();
         }
@@ -241,7 +233,6 @@ namespace Raft
                 RemoveElectionTimer();
                 RemoveLeaderHeartbeatWaitingTimer();
                 RemoveLeaderTimer();
-                RemoveDelayedPersistenceTimer();
                 RemoveNoLeaderAddCommandTimer();
                 this.NodeState = eNodeState.Follower;
                 this.NodeStateLog.LeaderSynchronizationIsActive = false;
@@ -315,34 +306,22 @@ namespace Raft
 
                     if (this.NodeState == eNodeState.Leader)
                         return;
-
-                  
-
                     VerbosePrint("Node {0} election timeout", NodeAddress.NodeAddressId);
-
                     this.NodeState = eNodeState.Candidate;
-
                     this.LeaderNodeAddress = null;
-
                     VerbosePrint("Node {0} state is {1} _ElectionTimeout", NodeAddress.NodeAddressId, this.NodeState);
-
                     //Voting for self
                     //VotesQuantity = 1;
                     VotesQuantity.Clear();
-
                     //Increasing local term number
                     NodeTerm++;
-                    
                     req = new CandidateRequest()
                     {
                         TermId = this.NodeTerm,
                         LastLogId = NodeStateLog.StateLogId,
                         LastTermId = NodeStateLog.StateLogTerm
                     };
-
-
                     //send to all was here
-
                     //Setting up new Election Timer
                     RunElectionTimer();
                 }
@@ -353,8 +332,6 @@ namespace Raft
             {
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.ElectionTimeout" });
             }
-
-            
         }
 
 
@@ -364,10 +341,8 @@ namespace Raft
             {
                 //Sending signal to all (except self that it is a leader)
                 LeaderHeartbeat heartBeat = null;
-
                 lock (lock_Operations)
                 {                  
-
                     heartBeat = new LeaderHeartbeat()
                     {
                         LeaderTerm = this.NodeTerm,
@@ -376,21 +351,15 @@ namespace Raft
                         LastStateLogCommittedIndex = this.NodeStateLog.LastCommittedIndex,
                         LastStateLogCommittedIndexTerm = this.NodeStateLog.LastCommittedIndexTerm
                     };
-
                 }
-
                 //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> leader_heartbeat");
                 this.Sender.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat.SerializeBiser(), this.NodeAddress, entitySettings.EntityName, true);                
-
-                
             }
             catch (Exception ex)
             {
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.LeaderTimerElapse" });
             }
         }
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -436,8 +405,6 @@ namespace Raft
             }
 
         }
-
-
         #region "TIMERS HANDLER"
 
         /// <summary>
@@ -453,7 +420,6 @@ namespace Raft
                 VerbosePrint("Node {0} RunElectionTimer {1} ms", NodeAddress.NodeAddressId, seed);
             }
         }
-
         /// <summary>
         /// 
         /// </summary>
@@ -488,22 +454,6 @@ namespace Raft
             }
         }
 
-        void RunDelayedPersistenceTimer()
-        {
-            if (Delayedpersistence_TimerId == 0)
-                Delayedpersistence_TimerId = this.TM.FireEventEach(entitySettings.DelayedPersistenceMs, (o)=> {
-                    lock (lock_Operations) { this.NodeStateLog?.FlushSleCache(); } }, null, false);
-        }
-
-        void RemoveDelayedPersistenceTimer()
-        {
-            if (this.Delayedpersistence_TimerId > 0)
-            {
-                this.TM.RemoveEvent(this.Delayedpersistence_TimerId);
-                this.Delayedpersistence_TimerId = 0;
-            }
-        }
-      
         void RunNoLeaderAddCommandTimer()
         {
             if (NoLeaderAddCommand_TimerId == 0)
@@ -570,20 +520,15 @@ namespace Raft
             if (this.NodeState != eNodeState.Leader)
                 return;
             StateLogEntryRequest req = StateLogEntryRequest.BiserDecode(data);//.DeserializeProtobuf<StateLogEntryRequest>();
-
             //Getting suggestion
             var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestionFromRequested(req);
-
-            //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I/T): {req.StateLogEntryId}/{req.StateLogEntryTerm} from {address.NodeAddressId};");
             VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
 
             if (suggestion != null)
             {
                 this.Sender.SendTo(address, eRaftSignalType.StateLogEntrySuggestion, suggestion.SerializeBiser(), this.NodeAddress, entitySettings.EntityName);
             }
-            
         }
-
         uint GetMajorityQuantity()
         {
             return (uint)Math.Floor((double)NodesQuantityInTheCluster / 2) + 1;
@@ -609,8 +554,6 @@ namespace Raft
 
             if (this.NodeTerm < suggest.LeaderTerm)
                 this.NodeTerm = suggest.LeaderTerm;
-
-
             if (suggest.StateLogEntry.Index <= NodeStateLog.LastCommittedIndex) //Preventing same entry income, can happen if restoration was sent twice (while switch of leaders)
                 return;  //breakpoint don't remove
 
@@ -626,7 +569,6 @@ namespace Raft
                     if (entitySettings.InMemoryEntity && entitySettings.InMemoryEntityStartSyncFromLatestEntity && this.NodeStateLog.LastAppliedIndex == 0)
                     {
                         //helps newly starting mode with specific InMemory parameters get only latest command for the entity
-
                         this.NodeStateLog.AddFakePreviousRecordForInMemoryLatestEntity(suggest.StateLogEntry.PreviousStateLogId, suggest.StateLogEntry.PreviousStateLogTerm);
 
                     }
@@ -637,7 +579,6 @@ namespace Raft
                     }
                 }                
             }          
-
             //We can apply new Log Entry from the Leader and answer successfully
             this.NodeStateLog.AddToLogFollower(suggest);
 
@@ -647,9 +588,6 @@ namespace Raft
                  StateLogEntryTerm = suggest.StateLogEntry.Term
                 // RedirectId = suggest.StateLogEntry.RedirectId
             };
-            
-            //this.NodeStateLog.LeaderSynchronizationIsActive = false;
-
             this.Sender.SendTo(address, eRaftSignalType.StateLogEntryAccepted, applied.SerializeBiser(), this.NodeAddress, entitySettings.EntityName);          
         }
 
@@ -660,9 +598,7 @@ namespace Raft
         {
             if(this.NodeState != eNodeState.Follower)
                 VerbosePrint("Node {0} state is {1} of {2}", NodeAddress.NodeAddressId, this.NodeState,this.LeaderNodeAddress?.NodeAddressId);
-
             this.NodeState = eNodeState.Follower;
-            
             this.NodeStateLog.LeaderSynchronizationIsActive = false;
             //Removing timers
             RemoveElectionTimer();
@@ -686,7 +622,6 @@ namespace Raft
             // Setting variable of the last heartbeat
             this.LeaderHeartbeatArrivalTime = DateTime.Now;
             this.LeaderNodeAddress = address;   //Can be incorrect in case if this node is Leader, must 
-
             //Comparing Terms
             if (this.NodeTerm < LeaderHeartbeat.LeaderTerm)
             {
@@ -739,8 +674,6 @@ namespace Raft
                         break;
                 }
             }
-
-
             //Here will come only Followers
             this.LeaderNodeAddress = address;
             if (!IsLeaderSynchroTimerActive && !this.NodeStateLog.SetLastCommittedIndexFromLeader(LeaderHeartbeat))
@@ -748,7 +681,6 @@ namespace Raft
                 //VerbosePrint($"{NodeAddress.NodeAddressId}>  in sync 2 ");
                 this.SyncronizeWithLeader();
             }
-        
         }
 
         bool IsLeaderSynchroTimerActive
@@ -764,7 +696,6 @@ namespace Raft
                     else
                         return true; //We are already in syncrhonization mode with the Leader
                 }
-
                 return false;
             }
         }
@@ -805,8 +736,6 @@ namespace Raft
             }
             this.Sender.SendTo(this.LeaderNodeAddress, eRaftSignalType.StateLogEntryRequest, req.SerializeBiser(), this.NodeAddress, entitySettings.EntityName);
         }
-
-
         /// <summary>
         /// All data which comes, brings TermId, if incoming TermId is bigger then current,
         /// Node updates its current termId toincoming Id and step back to the follower (if it was not).
@@ -1030,7 +959,6 @@ namespace Raft
 
             //Don't answer, committed value wil be delivered via standard channel           
         }
-
       
         /// <summary>
         /// Leader receives accepted Log
@@ -1050,10 +978,7 @@ namespace Raft
             if (res == StateLog.eEntryAcceptanceResult.Committed)
             {
                 this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})");
-
                 RemoveLeaderLogResendTimer();
-
-
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat= new LeaderHeartbeat()
                 {
@@ -1071,9 +996,7 @@ namespace Raft
 
                 ApplyLogEntry();
             }
-
         }
-
         void LeaderLogResendTimerElapse(object userToken)
         {
             try
@@ -1146,7 +1069,6 @@ namespace Raft
                             this.NodeStateLog.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
                             ApplyLogEntry();
                         }
-
                         res.LeaderAddress = this.NodeAddress;
                         res.AddResult = AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED;
                     }
@@ -1177,7 +1099,6 @@ namespace Raft
                                 ).SerializeBiser(), this.NodeAddress, entitySettings.EntityName);
                             }
                         }
-
                     }
                 }
             }
@@ -1186,7 +1107,6 @@ namespace Raft
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.AddLogEntryLeader" });
                 res.AddResult = AddLogEntryResult.eAddLogEntryResult.ERROR_OCCURED;
             }
-
             return res;
         }
 
@@ -1212,15 +1132,11 @@ namespace Raft
                     
             }
         }
-
-
         int inCommit = 0;
-                
         internal void Commited()
         {           
             if (System.Threading.Interlocked.CompareExchange(ref inCommit, 1, 0) != 0)
                 return;
-
             Task.Run(() =>
             {                
                 StateLogEntry sle = null;               
@@ -1270,7 +1186,6 @@ namespace Raft
                     catch (Exception ex)
                     {
                         Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.Commited" });
-
                         //Notifying Async AddLog
                         if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
                         {
@@ -1279,8 +1194,6 @@ namespace Raft
                             responseCrate.Set_MRE();
                         }
                     }
-
-                    //i++;
                 }
             });            
         }
