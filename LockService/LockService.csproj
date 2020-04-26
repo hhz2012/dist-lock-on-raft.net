@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Raft.Net\LockQueue\LockQueue.csproj" />
     <ProjectReference Include="..\Raft.Net\Raft.Core\Raft.Core.csproj" />
   </ItemGroup>
 

@@ -12,7 +12,7 @@ namespace NodeTest.Core
     class Program
     {
         static IWarningLog log = null;
-      
+
 
         static Raft.RaftEmulator.ClusterManagerEmulator cluster = null;
         static byte val = 0;
@@ -25,15 +25,15 @@ namespace NodeTest.Core
             cluster.TestSendData(
                 new ClusterCommand()
                 {
-                     Command="CreateShard",
-                     Target="",
-                     Targets=new List<string>()
+                    Command = "CreateShard",
+                    Target = "",
+                    Targets = new List<string>()
                      {
                           "entity1",
                           "entity2",
                           "entity3"
                      },
-                     IpAddress=new List<EndPoint>()
+                    IpAddress = new List<EndPoint>()
                      {
                           new EndPoint()
                           {
@@ -53,6 +53,15 @@ namespace NodeTest.Core
                      }
                 }
                 );
+
+            Console.ReadLine();
+            LockOper op = new LockOper()
+            {
+                Key = "key",
+                Oper = "lock",
+                Session = "session1"
+            };
+            cluster.TestWorkOperation(op);
 
             Console.ReadLine();
         }

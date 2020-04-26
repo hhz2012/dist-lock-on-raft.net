@@ -1,4 +1,5 @@
-﻿using Raft;
+﻿using LockQueueLib;
+using Raft;
 using Raft.Core.RaftEmulator;
 using Raft.Transport;
 using System;
@@ -13,8 +14,10 @@ namespace LockService
         TcpRaftNode trn = null;
         string nodeName = null;
         IWarningLog logger = null;
+        LockTable table = new LockTable();
         public LockSeriveControlNode(string nodeName, NodeSettings setting,int Port,string localPath,IWarningLog logger)
         {
+            
             this.nodeName = nodeName;
             this.logger = logger;
             trn = new TcpRaftNode(setting,
@@ -39,11 +42,23 @@ namespace LockService
                 return this.trn;
             }
         }
+        private TcpRaftNode wrk = null;
+        public TcpRaftNode WorkNode
+        {
+            get
+            {
+                return this.wrk;
+            }
+        }
         public async Task JoinShard(ClusterCommand command)
         {
             //create a node from name and start the network
             await StartWorkNode(command);
 
+        }
+        public async Task<bool> DoWork(LockOper oper)
+        {
+            return this.table.GetQueue(oper.Key).LockNoWait(oper.Session, LockType.Read);
         }
         public async Task StartWorkNode(ClusterCommand command)
         {
@@ -68,18 +83,19 @@ namespace LockService
                     eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
             int Port = eps[order].Port;
             var nodeName = this.nodeName + "_worker";
-            var wrk=new TcpRaftNode(
+            this.wrk=new TcpRaftNode(
                                    new NodeSettings()
                                    {
                                        TcpClusterEndPoints = eps,
                                        RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings }
                                    },
                                   LockClusterManager.PathRoot+nodeName,
-                                  new WorkerHandler(),
+                                  new WorkerHandler(this),
                                   Port,
                                   nodeName + "_Control",
                                   logger);
             wrk.Start();
+            
             await Task.Delay(2000);
             await wrk.StartConnect();
             

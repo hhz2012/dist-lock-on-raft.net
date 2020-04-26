@@ -51,7 +51,7 @@ namespace Raft.RaftEmulator
                 {
                     //S:\temp\RaftDbr
                     trn = new TcpRaftNode(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = new List<RaftEntitySettings> { re_settings } }, @"D:\Temp\RaftDBreeze\node" + (portStart + i),
-                        new WorkerHandler(),
+                        new WorkerHandler(null),
                         portStart + i, null,this);
 
                     //rn = new TcpRaftNode(eps, @"S:\temp\RaftDbr\node" + (4250 + i), 4250 + i,

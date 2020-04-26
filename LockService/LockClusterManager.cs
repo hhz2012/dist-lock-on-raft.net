@@ -106,5 +106,25 @@ namespace LockService
                 }
             });
         }
+        public void TestWorkOperation(LockOper command)
+        {
+            Task.Run(() =>
+            {
+                string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+                //data = "test";
+                lock (sync_nodes)
+                {
+                    if (Nodes.Count < 1)
+                        return;
+                    var leader = Nodes.Where(r => ((TcpRaftNode)r.WorkNode).IsLeader())
+                    .Select(r => (TcpRaftNode)r.WorkNode).FirstOrDefault();
+
+                    if (leader == null)
+                        return;
+
+                    ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                }
+            });
+        }
     }
 }
