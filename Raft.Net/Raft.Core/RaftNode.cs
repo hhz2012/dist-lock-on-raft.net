@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using DBreeze;
 using DBreeze.Utils;
 using Raft.Core.Handler;
+using Raft.Core.StateMachine;
 
 namespace Raft
 {
@@ -84,7 +85,7 @@ namespace Raft
         /// <summary>
         /// Node StateLog
         /// </summary>
-        StateLog NodeStateLog = null;
+        IStateLog NodeStateLog = null;
         /// <summary>
         /// Address of the current node
         /// </summary>
@@ -145,7 +146,7 @@ namespace Raft
             //Starting time master
             this.TM = new TimeMaster(log);
             //Starting state logger
-            NodeStateLog = new StateLog(this);
+            NodeStateLog = StateLogFactory.GetLog(this);
 
             //Adding AddLogEntryAsync cleanup
             this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);

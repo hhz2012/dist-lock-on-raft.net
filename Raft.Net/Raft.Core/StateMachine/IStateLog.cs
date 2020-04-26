@@ -2,10 +2,29 @@
   Copyright (C) 2018 tiesky.com / Alex Solovyov
   It's a free software for those, who think that it should be free.
 */
+using System;
+
 namespace Raft
 {
-    internal interface IStateLog
+    public  interface IStateLog
     {
+        public ulong StateLogId { get; set; } 
+        public ulong StateLogTerm { get; set; }
+
+        public ulong LastCommittedIndex { get; set; }
+
+        public bool LeaderSynchronizationIsActive { get; set; }
+    
+        public DateTime LeaderSynchronizationRequestWasSent { get; set; }
+
+        public ulong LastCommittedIndexTerm { get; set; }
+
+        public ulong LastBusinessLogicCommittedIndex { get; set; }
+
+        public uint LeaderSynchronizationTimeOut { get; set; }
+
+        public ulong LastAppliedIndex { get; set; }
+
         void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
         StateLogEntrySuggestion AddNextEntryToStateLogByLeader();
         void AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null);

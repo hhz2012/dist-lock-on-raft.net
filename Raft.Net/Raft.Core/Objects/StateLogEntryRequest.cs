@@ -15,7 +15,7 @@ namespace Raft
     /// <summary>
     /// Comes from the Follower to Leader in time of state log synchronization
     /// </summary>    
-    internal class StateLogEntryRequest : Biser.IEncoder
+    public class StateLogEntryRequest : Biser.IEncoder
     {
         public StateLogEntryRequest()
         {

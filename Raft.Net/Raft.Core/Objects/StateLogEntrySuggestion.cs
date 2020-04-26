@@ -12,7 +12,7 @@ using DBreeze.Utils;
 
 namespace Raft
 {    
-    internal class StateLogEntrySuggestion : Biser.IEncoder
+    public class StateLogEntrySuggestion : Biser.IEncoder
     {
         public StateLogEntrySuggestion()
         {

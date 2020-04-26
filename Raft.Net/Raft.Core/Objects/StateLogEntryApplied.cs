@@ -12,8 +12,8 @@ using DBreeze.Utils;
 
 namespace Raft
 {
-     
-    internal class StateLogEntryApplied : Biser.IEncoder
+
+    public class StateLogEntryApplied : Biser.IEncoder
     {
         public StateLogEntryApplied()
         {

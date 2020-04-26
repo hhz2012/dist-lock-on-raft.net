@@ -14,7 +14,7 @@ using DBreeze.Utils;
 namespace Raft
 {
 
-    internal class StateLog : IDisposable, IStateLog
+    public class StateLog : IDisposable, IStateLog
     {
         class StateLogEntryAcceptance
         {
@@ -50,29 +50,29 @@ namespace Raft
         /// Holds last committed State Log Index.
         /// If node is leader it sets it, if follower it comes with the Leader's heartbeat
         /// </summary>
-        public ulong LastBusinessLogicCommittedIndex = 0;
+        public ulong LastBusinessLogicCommittedIndex { get; set; } = 0;
         /// <summary>
         /// Holds last committed State Log Index.
         /// If node is leader it sets it, if follower it comes with the Leader's heartbeat
         /// </summary>
-        public ulong LastCommittedIndex = 0;
+        public ulong LastCommittedIndex { get; set; } = 0;
         /// <summary>
         /// Holds last committed State Log Term.
         /// If node is leader it sets it, if follower it comes with the Leader's heartbeat
         /// </summary>
-        public ulong LastCommittedIndexTerm = 0;
+        public ulong LastCommittedIndexTerm { get; set; } = 0;
         /// <summary>
         /// For leaders
         /// Applied entry is a majority of servers can be from previous term. 
         /// It will have the same index as LastCommitted only in case if on majority of servers will be stored at least one entry from current term. Docu.
         /// </summary>
-        public ulong LastAppliedIndex = 0;
+        public ulong LastAppliedIndex { get; set; } = 0;
         /// <summary>
         /// Monotonically grown StateLog Index.
         /// 
         /// </summary>
-        public ulong StateLogId = 0;
-        public ulong StateLogTerm = 0;
+        public ulong StateLogId { get; set; } = 0;
+        public ulong StateLogTerm { get; set; } = 0;
 
         public ulong PreviousStateLogId = 0;
         public ulong PreviousStateLogTerm = 0;
@@ -81,17 +81,17 @@ namespace Raft
         /// Follower part. State Log synchro with Leader.
         /// Indicates that synchronization request was sent to Leader
         /// </summary>
-        public bool LeaderSynchronizationIsActive = false;
+        public bool LeaderSynchronizationIsActive { get; set; } = false;
         /// <summary>
         /// Follower part. State Log synchro with Leader.
         /// Registers DateTime when synchronization request was sent.
         /// Until timeout (LeaderSynchronizationTimeOut normally 1 minute)- no more requests 
         /// </summary>
-        public DateTime LeaderSynchronizationRequestWasSent = DateTime.Now;
+        public DateTime LeaderSynchronizationRequestWasSent { get; set; } = DateTime.Now;
         /// <summary>
         /// Follower part. State Log synchro with Leader.
         /// </summary>
-        public uint LeaderSynchronizationTimeOut = 1;
+        public uint LeaderSynchronizationTimeOut { get; set; } = 1;
         /// <summary>
         /// Only for the Leader.
         /// Key is StateLogEntryId, Value contains information about how many nodes accepted LogEntry

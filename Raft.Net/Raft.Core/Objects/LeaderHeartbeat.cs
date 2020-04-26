@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 using DBreeze.Utils;
 
 namespace Raft
-{    
-    internal class LeaderHeartbeat:Biser.IEncoder
+{
+    public class LeaderHeartbeat:Biser.IEncoder
     {
         public LeaderHeartbeat()
         {
