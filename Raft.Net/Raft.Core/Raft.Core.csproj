@@ -17,7 +17,7 @@
   <ItemGroup>
     <Content Include="!!!Notes.txt" />
     <Content Include="!!!TODO.txt" />
-    <Content Include="StateMachine\!!!DBreezeScheme.txt" />
+    <Content Include="StateMachine\Log\!!!DBreezeScheme.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="StateMachine\AddLogEntryResult.cs">
+    <Compile Update="StateMachine\Log\AddLogEntryResult.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
