@@ -17,7 +17,7 @@ namespace Raft
     /// <summary>
     /// Main class. Initiate and Run.
     /// </summary>
-    public class RaftNode : IRaftComReceiver,IDisposable 
+    public class RaftStateMachine :IRaftStateMachine, IDisposable 
     {
         public enum eNodeState
         {
@@ -40,7 +40,7 @@ namespace Raft
         /// <summary>
         /// Communication interface
         /// </summary>
-        IRaftComSender Sender = null;
+        IPeerConnector Sender = null;
         /// <summary>
         /// Node settings
         /// </summary>
@@ -121,7 +121,7 @@ namespace Raft
         /// </summary>
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
         IActionHandler handler;
-        internal DBreezeEngine db;
+        //internal DBreezeEngine db;
         public string NodeName { get; set; }
 
         /// <summary>
@@ -132,13 +132,13 @@ namespace Raft
         /// <param name="raftSender"></param>
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
-        public RaftNode(RaftEntitySettings settings, DBreezeEngine dbEngine, IRaftComSender raftSender, IWarningLog log, IActionHandler handler)
+        public RaftStateMachine(RaftEntitySettings settings, DBreezeEngine dbEngine, IPeerConnector raftSender, IWarningLog log, IActionHandler handler)
         {
 
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
             this.handler = handler;
             this.handler.SetNode(this);
-            this.db = dbEngine;
+            //this.db = dbEngine;
                         
             Sender = raftSender;
             entitySettings = settings;           
@@ -146,7 +146,7 @@ namespace Raft
             //Starting time master
             this.TM = new TimeMaster(log);
             //Starting state logger
-            NodeStateLog = StateLogFactory.GetLog(this);
+            NodeStateLog = StateLogFactory.GetLog(this, dbEngine);
 
             //Adding AddLogEntryAsync cleanup
             this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);

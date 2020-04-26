@@ -13,7 +13,7 @@ namespace Raft
     /// <summary>
     /// Sender of messages, concerning Raft protocol
     /// </summary>
-    public interface IRaftComSender
+    public interface IPeerConnector
     {
 
         /// <summary>

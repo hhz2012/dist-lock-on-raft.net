@@ -7,12 +7,12 @@ namespace Raft.Core.RaftEmulator
 {
     public abstract class ActionHandlerBase:IActionHandler
     {
-        protected RaftNode raftNode = null;
+        protected RaftStateMachine raftNode = null;
         public ActionHandlerBase()
         {
             
         }
-        public bool SetNode(RaftNode raftNode)
+        public bool SetNode(RaftStateMachine raftNode)
         {
             this.raftNode = raftNode;
             return true;

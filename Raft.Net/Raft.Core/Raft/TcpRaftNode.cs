@@ -23,7 +23,7 @@ namespace Raft.Transport
     {       
         internal IWarningLog log = null;
         internal int port = 0;
-        internal Dictionary<string, RaftNode> raftNodes = new Dictionary<string, RaftNode>();
+        internal Dictionary<string, RaftStateMachine> raftNodes = new Dictionary<string, RaftStateMachine>();
         internal TcpPeerConnector spider = null;
         internal DBreezeEngine dbEngine;
         internal NodeSettings NodeSettings = null;
@@ -83,7 +83,7 @@ namespace Raft.Transport
                 if (this.raftNodes.ContainsKey(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
-                var rn = new RaftNode(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, handler);
+                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, handler);
              
                 rn.Verbose = re_settings.VerboseRaft;       
                 rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
@@ -118,9 +118,9 @@ namespace Raft.Transport
                 rn.Value.PeerIsDisconnected(endpointsid);
         }
 
-        public RaftNode GetNodeByEntityName(string entityName)
+        public RaftStateMachine GetNodeByEntityName(string entityName)
         {
-            RaftNode rn = null;
+            RaftStateMachine rn = null;
             raftNodes.TryGetValue(entityName, out rn);
             return rn;
         }
@@ -167,7 +167,7 @@ namespace Raft.Transport
 
         public bool NodeIsInLatestState(string entityName = "default")
         {
-            RaftNode rn = null;
+            RaftStateMachine rn = null;
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 return rn.NodeIsInLatestState;
 
@@ -176,7 +176,7 @@ namespace Raft.Transport
 
         public AddLogEntryResult AddLogEntry(byte[] data, string entityName = "default")
         {
-            RaftNode rn = null;
+            RaftStateMachine rn = null;
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 return rn.AddLogEntry(data);
 
@@ -188,7 +188,7 @@ namespace Raft.Transport
             if (System.Threading.Interlocked.Read(ref disposed) == 1)
                 return false;
 
-            RaftNode rn = null;
+            RaftStateMachine rn = null;
             if (this.raftNodes.TryGetValue(entityName, out rn))
             {
                 //Generating externalId
@@ -287,7 +287,7 @@ namespace Raft.Transport
         /// <param name="entityName"></param>
         public void Debug_PrintOutInMemory(string entityName = "default")
         {
-            RaftNode rn = null;
+            RaftStateMachine rn = null;
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 rn.Debug_PrintOutInMemory();
         }

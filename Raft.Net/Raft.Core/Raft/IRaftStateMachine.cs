@@ -13,7 +13,7 @@ namespace Raft
     /// <summary>
     /// Receiver of incoming messages concerning RAFT protocol
     /// </summary>
-    public interface IRaftComReceiver
+    public interface IRaftStateMachine
     {
         
         /// <param name="address">Address of the node-sender</param>

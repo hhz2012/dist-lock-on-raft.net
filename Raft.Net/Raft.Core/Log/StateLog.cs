@@ -43,7 +43,7 @@ namespace Raft
         ///// Leader only. Stores logs before being distributed.
         ///// </summary>
 
-        internal RaftNode rn = null;
+        internal RaftStateMachine rn = null;
 
 
         /// <summary>
@@ -105,10 +105,11 @@ namespace Raft
 
 
         IndexTermDict<StateLogEntry> inMem = new IndexTermDict<StateLogEntry>();
-
-        public StateLog(RaftNode rn)
+        DBreezeEngine db = null;
+        public StateLog(RaftStateMachine rn, DBreezeEngine dbEngine)
         {
             this.rn = rn;
+            this.db = dbEngine;
 
             if (rn.entitySettings.EntityName != "default")
                 tblStateLogEntry += "_" + rn.entitySettings.EntityName;
@@ -116,7 +117,7 @@ namespace Raft
             if (rn.entitySettings.InMemoryEntity)
                 tblStateLogEntry = "mem_" + tblStateLogEntry;
 
-            using (var t = this.rn.db.GetTransaction())
+            using (var t = this.db.GetTransaction())
             {
                 var row = t.SelectBackwardFromTo<byte[], byte[]>(tblStateLogEntry,
                     new byte[] { 1 }.ToBytes(ulong.MaxValue, ulong.MaxValue), true,
@@ -244,7 +245,7 @@ namespace Raft
             PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
             StateLogId = suggest.StateLogEntry.Index;
             StateLogTerm = suggest.StateLogEntry.Term;
-            using (var t = this.rn.db.GetTransaction())
+            using (var t = this.db.GetTransaction())
             {
                 t.Insert<byte[], byte[]>(tblStateLogEntry, new byte[] { 1 }.ToBytes(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term), suggest.StateLogEntry.SerializeBiser());
                 t.Commit();
@@ -266,7 +267,7 @@ namespace Raft
 
                 ulong populateFrom = 0;
                 Tuple<ulong, StateLogEntry> sleTpl;
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
 
                     t.ValuesLazyLoadingIsOn = false;
@@ -305,7 +306,7 @@ namespace Raft
                 return;
 
             FlushSleCache();
-            using (var t = this.rn.db.GetTransaction())
+            using (var t = this.db.GetTransaction())
             {
                 //Removing from the persisted all keys equal or bigger then suppled Log
                 foreach (var el in t.SelectForwardFromTo<byte[], byte[]>(tblStateLogEntry,
@@ -327,7 +328,7 @@ namespace Raft
             {
                 rn.VerbosePrint($"{rn.NodeAddress.NodeAddressId}> flushing: {sleCache.Count}");
 
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
                     if (sleCache.Count > 0)
                     {
@@ -367,7 +368,7 @@ namespace Raft
             }
             else
             {
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
                     t.Insert<byte[], ulong>(tblStateLogEntry, new byte[] { 3 }, index);
                     t.Commit();
@@ -395,7 +396,7 @@ namespace Raft
             ulong prevId = 0;
             ulong prevTerm = 0;
 
-            using (var t = this.rn.db.GetTransaction())
+            using (var t = this.db.GetTransaction())
             {
 
                 if (req.StateLogEntryId == 0)// && req.StateLogEntryTerm == 0)
@@ -523,7 +524,7 @@ namespace Raft
             try
             {
                 Tuple<ulong, StateLogEntry> sleTpl;
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
                     var row = t.Select<byte[], byte[]>(tblStateLogEntry, new byte[] { 1 }.ToBytes(logEntryId, logEntryTerm));
                     if (!row.Exists)
@@ -555,7 +556,7 @@ namespace Raft
             {
                 if (this.LastCommittedIndex < logEntryId)
                     return null;
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
                     foreach (var el in t.SelectForwardFromTo<byte[], byte[]>(tblStateLogEntry,
                                 new byte[] { 1 }.ToBytes(logEntryId, ulong.MinValue), true,
@@ -584,7 +585,7 @@ namespace Raft
         {
             try
             {
-                using (var t = this.rn.db.GetTransaction())
+                using (var t = this.db.GetTransaction())
                 {
                     foreach (var el in t.SelectForwardFromTo<byte[], byte[]>(tblStateLogEntry,
                                 new byte[] { 1 }.ToBytes(suggestion.StateLogEntry.Index, ulong.MinValue), true,
@@ -722,7 +723,7 @@ namespace Raft
                     //Saving committed entry (all previous are automatically committed)
                     List<byte[]> lstCommited = new List<byte[]>();
 
-                    using (var t = this.rn.db.GetTransaction())
+                    using (var t = this.db.GetTransaction())
                     {
                         //Gathering all not commited entries that are bigger than latest committed index
                         t.ValuesLazyLoadingIsOn = false;

@@ -11,13 +11,13 @@
   <ItemGroup>
     <None Remove="!!!Notes.txt" />
     <None Remove="!!!TODO.txt" />
-    <None Remove="StateMachine\!!!DBreezeScheme.txt" />
+    <None Remove="Log\!!!DBreezeScheme.txt" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="!!!Notes.txt" />
     <Content Include="!!!TODO.txt" />
-    <Content Include="StateMachine\Log\!!!DBreezeScheme.txt" />
+    <Content Include="Log\Entry\!!!DBreezeScheme.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="StateMachine\Log\AddLogEntryResult.cs">
+    <Compile Update="Log\Entry\AddLogEntryResult.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

@@ -17,7 +17,7 @@ namespace Raft.Transport
     /// <summary>
     /// Spider manages connections for all listed nodes of the net
     /// </summary>
-    internal class TcpPeerConnector : IRaftComSender, IDisposable
+    internal class TcpPeerConnector : IPeerConnector, IDisposable
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
