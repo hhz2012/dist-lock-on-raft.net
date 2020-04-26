@@ -17,12 +17,12 @@ namespace Raft.Transport
     /// <summary>
     /// Spider manages connections for all listed nodes of the net
     /// </summary>
-    internal class TcpSpider : IRaftComSender, IDisposable
+    internal class TcpPeerConnector : IRaftComSender, IDisposable
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
         internal TcpRaftNode trn = null;
-        public TcpSpider(TcpRaftNode trn)
+        public TcpPeerConnector(TcpRaftNode trn)
         {
             this.trn = trn;          
         }
@@ -34,7 +34,6 @@ namespace Raft.Transport
         public void RemoveAll()
         {
             var lst = Peers.ToList();
-
             _sync.EnterWriteLock();
             try
             {
@@ -62,12 +61,8 @@ namespace Raft.Transport
                 catch
                 {
                 }
-               
             }
-
         }
-
-       
 
         internal void RemovePeerFromClusterEndPoints(string endpointsid)
         {
@@ -125,7 +120,6 @@ namespace Raft.Transport
                             }).SerializeBiser())
                         );
                     }
-                  
                 }
                 else
                 {
@@ -165,14 +159,11 @@ namespace Raft.Transport
                 try
                 {
                     TcpClient cl = new TcpClient();
-                    
                     if (this.IsMe(el))
                     {
                         continue;
                     }
                     await cl.ConnectAsync(el.Host, el.Port);
-
-                  
                     el.Peer = new TcpPeer(cl, trn);
 
                     el.Peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 01 }, (new TcpMsgHandshake()                    
@@ -240,12 +231,6 @@ namespace Raft.Transport
 
                 if (ws.Count > 0)
                 {                    
-                    //trn.log.Log(new WarningLogEntry()
-                    //{
-                    //    LogType = WarningLogEntry.eLogType.DEBUG,
-                    //    Description = $"{trn.port} ({trn.rn.NodeState})> peers: {peers.Count}; ceps: {trn.clusterEndPoints.Count}; will send: {ws.Count}"
-                    //});
-
                     await HandshakeTo(ws);
                 }
 
@@ -308,9 +293,6 @@ namespace Raft.Transport
 
 
             }
-
-
-
         }
 
         public void SendToAllFreeMessage(string msgType, string dataString="", byte[] data=null, NodeAddress senderNodeAddress = null)
@@ -347,10 +329,6 @@ namespace Raft.Transport
             }
            
         }
-
-      
-
-        
 
         int disposed = 0;
         public void Dispose()

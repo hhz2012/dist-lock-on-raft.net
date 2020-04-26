@@ -5,7 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="RaftEmulator\ClusterManagerEmulator.cs" />
     <Compile Remove="RaftEmulator\IEmulatedNode.cs" />
+    <Compile Remove="RaftEmulator\ShardEmulator.cs" />
     <Compile Remove="RaftEmulator\UdpEmulator.cs" />
   </ItemGroup>
 

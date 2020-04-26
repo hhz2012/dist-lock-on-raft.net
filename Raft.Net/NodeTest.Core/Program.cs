@@ -13,8 +13,6 @@ namespace NodeTest.Core
     {
         static IWarningLog log = null;
 
-
-        static Raft.RaftEmulator.ClusterManagerEmulator cluster = null;
         static byte val = 0;
 
         static void Main(string[] args)

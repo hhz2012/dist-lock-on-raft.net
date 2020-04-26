@@ -37,33 +37,6 @@ namespace Raft.Transport
             return enc;
         }
 
-        public static TcpClusterEndPoint BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                if (extDecoder.CheckNull())
-                    return null;
-                else
-                    decoder = extDecoder;
-            }
-
-            TcpClusterEndPoint m = new TcpClusterEndPoint();  //!!!!!!!!!!!!!! change return type
-
-            m.Host = decoder.GetString();
-            m.Port = decoder.GetInt();
-
-            return m;
-        }
-
         public void BiserJsonEncode(Biser.JsonEncoder encoder)
         {
             encoder.Add("Host", this.Host);

@@ -10,12 +10,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="backup\Program.cs" />
+    <ProjectReference Include="..\..\LockService\LockService.csproj" />
+    <ProjectReference Include="..\Raft.Core\Raft.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\LockService\LockService.csproj" />
-    <ProjectReference Include="..\Raft.Core\Raft.Core.csproj" />
+    <Folder Include="backup\" />
   </ItemGroup>
 
 </Project>

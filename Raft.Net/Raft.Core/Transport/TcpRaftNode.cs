@@ -19,12 +19,12 @@ using Raft.Core.Handler;
 
 namespace Raft.Transport
 {
-    public class TcpRaftNode: IDisposable, IEmulatedNode
+    public class TcpRaftNode: IDisposable
     {       
         internal IWarningLog log = null;
         internal int port = 0;
         internal Dictionary<string, RaftNode> raftNodes = new Dictionary<string, RaftNode>();
-        internal TcpSpider spider = null;
+        internal TcpPeerConnector spider = null;
         internal DBreezeEngine dbEngine;
         internal NodeSettings NodeSettings = null;
         internal string nodeName;
@@ -62,7 +62,7 @@ namespace Raft.Transport
 
             dbEngine = new DBreezeEngine(conf);
 
-            spider = new TcpSpider(this);
+            spider = new TcpPeerConnector(this);
 
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
@@ -111,41 +111,7 @@ namespace Raft.Transport
 
             return false;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="jsonConfiguration">json representation of Raft.NodeSettings</param>
-        /// <param name="dbreezePath"></param>
-        /// <param name="port"></param>
-        /// <param name="log"></param>
-        /// <param name="OnCommit"></param>
-        /// <returns></returns>
-        public static TcpRaftNode GetFromConfig(string jsonConfiguration, string dbreezePath, int port, IWarningLog log, IActionHandler handler)
-        {
-            try
-            {
-                TcpRaftNode rn = null;
-                NodeSettings ns = NodeSettings.BiserJsonDecode(jsonConfiguration);
-
-                //Biser.JsonEncoder encc = new Biser.JsonEncoder(new NodeSettings() { TcpClusterEndPoints = eps, RaftEntitiesSettings = reSettings });
-                //var str = encc.GetJSON(Biser.JsonSettings.JsonStringStyle.Prettify);
-
-                //NodeSettings nhz = NodeSettings.BiserJsonDecode(str);
-
-                //encc = new Biser.JsonEncoder(nhz);
-                //str = encc.GetJSON(Biser.JsonSettings.JsonStringStyle.Prettify);
-
-                rn = new TcpRaftNode(ns, dbreezePath, handler, port, null,log);
-                return rn;
-            }
-            catch (Exception ex)
-            {
-                if (log != null)
-                    log.Log(new WarningLogEntry { LogType = WarningLogEntry.eLogType.ERROR, Exception = ex, Method = "TcpRaftNode.GetFromConfig JSON" });
-            }
-            return null;
-        }
+       
         internal void PeerIsDisconnected(string endpointsid)
         {
             foreach(var rn in this.raftNodes)
@@ -158,22 +124,10 @@ namespace Raft.Transport
             raftNodes.TryGetValue(entityName, out rn);
             return rn;
         }
-
-        public void EmulationStart()
-        {          
-        }
-
-        public void EmulationStop()
-        {
-         
-        }
-
         public void Start()
         {
             new Thread(new ThreadStart(StartTcpListener)).Start();
             Task.Delay(1000);
-
-            
         }
         public async Task StartConnect()
         {
@@ -210,9 +164,6 @@ namespace Raft.Transport
                     log.Log(new WarningLogEntry() { Exception = ex });
             }
         }
-
-     
-
 
         public bool NodeIsInLatestState(string entityName = "default")
         {
@@ -281,8 +232,6 @@ namespace Raft.Transport
             }
             return false;
         }
-
-
         long disposed = 0;
         public bool Disposed
         {
@@ -293,7 +242,6 @@ namespace Raft.Transport
         {
             if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
                 return;
-
             try
             {
                 if (server != null)
@@ -307,8 +255,6 @@ namespace Raft.Transport
             {
                 
             }
-
-
             try
             {
                 foreach (var rn in this.raftNodes)
@@ -320,7 +266,6 @@ namespace Raft.Transport
             }
             catch (Exception ex)
             {
-
             }
 
             try
