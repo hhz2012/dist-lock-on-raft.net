@@ -19,7 +19,7 @@ namespace LockService
             this.logger = logger;
             trn = new TcpRaftNode(setting,
                                  localPath,              
-                                 new ClusterManagerHandler(),
+                                 new LockClusterManagerHandler(this),
                                  Port,
                                  nodeName+"_Control",
                                  logger);
@@ -39,9 +39,10 @@ namespace LockService
                 return this.trn;
             }
         }
-        public void JoinShard(ClusterCommand command)
+        public async Task JoinShard(ClusterCommand command)
         {
             //create a node from name and start the network
+            await StartWorkNode(command);
 
         }
         public async Task StartWorkNode(ClusterCommand command)
@@ -78,9 +79,9 @@ namespace LockService
                                   Port,
                                   nodeName + "_Control",
                                   logger);
-            trn.Start();
+            wrk.Start();
             await Task.Delay(2000);
-            await trn.StartConnect();
+            await wrk.StartConnect();
             
         }
     }
