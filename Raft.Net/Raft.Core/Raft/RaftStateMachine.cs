@@ -110,17 +110,18 @@ namespace Raft
         /// <param name="raftSender"></param>
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
-        public RaftStateMachine(RaftEntitySettings settings, DBreezeEngine dbEngine, IPeerConnector raftSender, IWarningLog log, IActionHandler handler)
+        public RaftStateMachine(RaftEntitySettings settings, string workPath, IPeerConnector raftSender, IWarningLog log, IActionHandler handler)
         {
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
             this.handler = handler;
             this.handler.SetNode(this);
             Sender = raftSender;
-            entitySettings = settings;           
+            entitySettings = settings;         
+           
             //Starting time master
             this.TM = new TimeMaster(log);
             //Starting state logger
-            NodeStateLog = StateLogFactory.GetLog(this, dbEngine);
+            NodeStateLog = StateLogFactory.GetLog(this, workPath);
             //Adding AddLogEntryAsync cleanup
             this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);
         }

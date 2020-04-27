@@ -7,9 +7,9 @@ namespace Raft.Core.StateMachine
 {
     public class StateLogFactory
     {
-        public static IStateLog GetLog(RaftStateMachine node, DBreezeEngine dbEngine)
+        public static IStateLog GetLog(RaftStateMachine node, string workPath)
         {
-            return new MemStateLog(node);
+            return new LiteLog(node,workPath);
         }
     }
 }

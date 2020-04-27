@@ -11,7 +11,7 @@ using DBreeze.Utils;
 
 namespace Raft
 {
-    public class RaftEntitySettings : Biser.IJsonEncoder
+    public class RaftEntitySettings 
     {
         public RaftEntitySettings()
         {
@@ -85,96 +85,6 @@ namespace Raft
         /// </summary>
         public bool VerboseTransport = false;
 
-        public void BiserJsonEncode(Biser.JsonEncoder encoder)
-        {
-            encoder.Add("EntityName", this.EntityName);
-                //encoder.Add("LeaderHeartbeatMs", this.LeaderHeartbeatMs);
-            encoder.Add("DelayedPersistenceMs", this.DelayedPersistenceMs);
-                //encoder.Add("NoLeaderAddCommandResendIntervalMs", this.NoLeaderAddCommandResendIntervalMs);
-            encoder.Add("DelayedPersistenceIsActive", this.DelayedPersistenceIsActive);
-            encoder.Add("InMemoryEntity", this.InMemoryEntity);
-            encoder.Add("InMemoryEntityStartSyncFromLatestEntity", this.InMemoryEntityStartSyncFromLatestEntity);
-                //encoder.Add("ElectionTimeoutMinMs", this.ElectionTimeoutMinMs);
-                //encoder.Add("ElectionTimeoutMaxMs", this.ElectionTimeoutMaxMs);
-                //encoder.Add("LeaderLogResendIntervalMs", this.LeaderLogResendIntervalMs);
-                //encoder.Add("RaftNodeIdExternalForEmulator", this.RaftNodeIdExternalForEmulator);
-                //encoder.Add("InitialQuantityOfRaftNodesInTheCluster", this.InitialQuantityOfRaftNodesInTheCluster);
-            encoder.Add("VerboseRaft", this.VerboseRaft);
-            encoder.Add("VerboseTransport", this.VerboseTransport);
-        }
-
-        public static RaftEntitySettings BiserJsonDecode(string enc = null, Biser.JsonDecoder extDecoder = null, Biser.JsonSettings settings = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.JsonDecoder decoder = null;
-
-            if (extDecoder == null)
-            {
-                if (enc == null || String.IsNullOrEmpty(enc))
-                    return null;
-                decoder = new Biser.JsonDecoder(enc, settings);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                //JSONSettings of the existing decoder will be used
-                decoder = extDecoder;
-            }
-
-            RaftEntitySettings m = new RaftEntitySettings();  //!!!!!!!!!!!!!! change return type
-            foreach (var props in decoder.GetDictionary<string>())
-            {
-                switch (props)
-                {
-                    case "EntityName":
-                        m.EntityName = decoder.GetString();
-                        break;
-                    //case "LeaderHeartbeatMs":
-                    //    m.LeaderHeartbeatMs = decoder.GetUInt();
-                    //    break;
-                    case "DelayedPersistenceMs":
-                        m.DelayedPersistenceMs = decoder.GetUInt();
-                        break;
-                    //case "NoLeaderAddCommandResendIntervalMs":
-                    //    m.NoLeaderAddCommandResendIntervalMs = decoder.GetUInt();
-                    //    break;
-                    case "DelayedPersistenceIsActive":
-                        m.DelayedPersistenceIsActive = decoder.GetBool();
-                        break;
-                    case "InMemoryEntity":
-                        m.InMemoryEntity = decoder.GetBool();
-                        break;
-                    case "InMemoryEntityStartSyncFromLatestEntity":
-                        m.InMemoryEntityStartSyncFromLatestEntity = decoder.GetBool();
-                        break;                    
-                    //case "ElectionTimeoutMinMs":
-                    //    m.ElectionTimeoutMinMs = decoder.GetInt();
-                    //    break;
-                    //case "ElectionTimeoutMaxMs":
-                    //    m.ElectionTimeoutMaxMs = decoder.GetInt();
-                    //    break;
-                    //case "LeaderLogResendIntervalMs":
-                    //    m.LeaderLogResendIntervalMs = decoder.GetUInt();
-                    //    break;
-                    //case "RaftNodeIdExternalForEmulator":
-                    //    m.RaftNodeIdExternalForEmulator = decoder.GetInt();
-                    //    break;
-                    //case "InitialQuantityOfRaftNodesInTheCluster":
-                    //    m.InitialQuantityOfRaftNodesInTheCluster = decoder.GetUInt();
-                    //    break;                    
-                    case "VerboseRaft":
-                        m.VerboseRaft = decoder.GetBool();
-                        break;
-                    case "VerboseTransport":
-                        m.VerboseTransport = decoder.GetBool();
-                        break;
-                    default:
-                        decoder.SkipValue();//MUST BE HERE
-                        break;
-                }
-            }
-            return m;
-        }//eof
-
+    
     }//eoc
 }//eon

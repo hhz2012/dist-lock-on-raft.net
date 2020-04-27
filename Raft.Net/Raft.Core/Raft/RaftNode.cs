@@ -39,13 +39,7 @@ namespace Raft.Transport
             this.log = log;
             this.port = port;
 
-            DBreezeConfiguration conf = new DBreezeConfiguration()
-            {
-                DBreezeDataFolderName = dbreezePath
-            };
-            conf.Storage = DBreezeConfiguration.eStorage.DISK;
-            conf.AlternativeTablesLocations.Add("mem_*", String.Empty);
-            dbEngine = new DBreezeEngine(conf);
+          
             peerNetwork = new TcpPeerNetwork(this);
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
@@ -63,7 +57,7 @@ namespace Raft.Transport
                 if (this.raftNodes.ContainsKey(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
-                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.peerNetwork, this.log, handler);
+                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), dbreezePath, this.peerNetwork, this.log, handler);
              
                 rn.Verbose = re_settings.VerboseRaft;       
                 rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
