@@ -27,7 +27,7 @@ namespace Raft
 
         void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
         StateLogEntrySuggestion AddNextEntryToStateLogByLeader();
-        void AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null);
+        StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null);
         void AddToLogFollower(StateLogEntrySuggestion suggestion);
         void BusinessLogicIsApplied(ulong index);
         void ClearLogAcceptance();

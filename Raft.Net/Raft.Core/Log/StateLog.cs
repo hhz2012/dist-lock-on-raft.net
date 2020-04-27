@@ -197,7 +197,7 @@ namespace Raft
         /// <param name="data"></param>
         /// <param name="externalID">if set up must be returned in OnCommitted to notify that command is executed</param>
         /// <returns></returns>
-        public void AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
+        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
         {
             /*
              * Only nodes of the current term can be distributed
@@ -220,6 +220,7 @@ namespace Raft
             };
 
             qDistribution.Add(le.Index, le);
+            return le;
         }
 
         /// <summary>

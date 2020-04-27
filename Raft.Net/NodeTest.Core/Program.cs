@@ -52,15 +52,20 @@ namespace NodeTest.Core
                 }
                 );
 
-            Console.ReadLine();
-            LockOper op = new LockOper()
+            while (true)
             {
-                Key = "key",
-                Oper = "lock",
-                Session = "session1"
-            };
-            cluster.TestWorkOperation(op);
+                Console.WriteLine("before lock operation,press enter");
+                Console.ReadLine();
 
+                LockOper op = new LockOper()
+                {
+                    Key = "key",
+                    Oper = "lock",
+                    Session = "session1"
+                };
+                cluster.TestWorkOperation(op);
+
+            }
             Console.ReadLine();
         }
 

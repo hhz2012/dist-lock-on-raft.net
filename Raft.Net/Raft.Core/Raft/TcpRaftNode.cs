@@ -177,8 +177,9 @@ namespace Raft.Transport
         public AddLogEntryResult AddLogEntry(byte[] data, string entityName = "default")
         {
             RaftStateMachine rn = null;
+            var msgId = AsyncResponseHandler.GetMessageId();
             if (this.raftNodes.TryGetValue(entityName, out rn))
-                return rn.AddLogEntry(data);
+                return rn.AddLogEntry(data,msgId);
 
             return new AddLogEntryResult { AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_FOUND_BY_NAME };
         }

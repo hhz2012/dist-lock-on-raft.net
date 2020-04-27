@@ -26,7 +26,7 @@ namespace Raft.Core.StateMachine
             throw new NotImplementedException();
         }
 
-        public void AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
+        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
         {
             throw new NotImplementedException();
         }
