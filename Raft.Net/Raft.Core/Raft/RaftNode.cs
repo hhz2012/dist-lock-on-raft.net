@@ -3,23 +3,13 @@
   It's a free software for those, who think that it should be free.
 */
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using DBreeze;
 using DBreeze.Utils;
-using DotNetty.Buffers;
-using DotNetty.Codecs;
-using DotNetty.Transport.Bootstrapping;
-using DotNetty.Transport.Channels;
-using DotNetty.Transport.Channels.Sockets;
+
 using Raft.Core.Handler;
 
 namespace Raft.Transport
@@ -53,21 +43,10 @@ namespace Raft.Transport
             {
                 DBreezeDataFolderName = dbreezePath
             };
-
-            if (nodeSettings.RaftEntitiesSettings.Where(MyEnt => !MyEnt.InMemoryEntity).Count() == 0)
-            {
-                conf.Storage = DBreezeConfiguration.eStorage.MEMORY;
-            }
-            else
-            {
-                conf.Storage = DBreezeConfiguration.eStorage.DISK;
-            }
+            conf.Storage = DBreezeConfiguration.eStorage.DISK;
             conf.AlternativeTablesLocations.Add("mem_*", String.Empty);
-
             dbEngine = new DBreezeEngine(conf);
-
             spider = new TcpPeerNetwork(this);
-
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
             {
@@ -93,7 +72,6 @@ namespace Raft.Transport
                 rn.NodeAddress.NodeUId = Guid.NewGuid().ToByteArray().Substring(8, 8).To_Int64_BigEndian();
                 rn.NodeName = this.NodeName;
                 this.raftNodes[re_settings.EntityName] = rn;
-
                 rn.NodeStart();
             }
         }
@@ -120,7 +98,6 @@ namespace Raft.Transport
             foreach(var rn in this.raftNodes)
                 rn.Value.PeerIsDisconnected(endpointsid);
         }
-
         public RaftStateMachine GetNodeByEntityName(string entityName)
         {
             RaftStateMachine rn = null;
@@ -131,24 +108,19 @@ namespace Raft.Transport
         {
             await spider.Handshake();
         }
-
-       
         public bool NodeIsInLatestState(string entityName = "default")
         {
             RaftStateMachine rn = null;
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 return rn.NodeIsInLatestState;
-
             return false;
         }
-
         public AddLogEntryResult AddLogEntry(byte[] data, string entityName = "default")
         {
             RaftStateMachine rn = null;
             var msgId = AsyncResponseHandler.GetMessageId();
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 return rn.AddLogEntry(data,msgId);
-
             return new AddLogEntryResult { AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_FOUND_BY_NAME };
         }
                
@@ -234,6 +206,4 @@ namespace Raft.Transport
                 rn.Debug_PrintOutInMemory();
         }
     }//eo class
-
-   
 }//eo namespace
