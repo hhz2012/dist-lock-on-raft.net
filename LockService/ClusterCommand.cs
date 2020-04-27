@@ -6,6 +6,10 @@ namespace LockService
 {
     public class ClusterCommand
     {
+        public ClusterCommand()
+        {
+
+        }
         public string Command { get; set; }
 
         public string Target { get; set; }
