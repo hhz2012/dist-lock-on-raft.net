@@ -2,6 +2,7 @@
   Copyright (C) 2018 tiesky.com / Alex Solovyov
   It's a free software for those, who think that it should be free.
 */
+using DotNetty.Transport.Channels;
 using Raft.Core;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ namespace Raft.Transport
     /// <summary>
     /// Spider manages connections for all listed nodes of the net
     /// </summary>
-    internal class TcpPeerConnector : IPeerConnector, IDisposable
+    public  class TcpPeerConnector : IPeerConnector, IDisposable
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
@@ -27,9 +28,14 @@ namespace Raft.Transport
             this.trn = trn;          
         }
 
-        public void AddTcpClient(TcpClient peer)
-        {   
-            var p = new TcpPeer(peer, trn);           
+        //public void AddTcpClient(TcpClient peer)
+        //{   
+        //    var p = new TcpPeer(peer, trn);           
+        //}
+        public TcpPeer AddTcpClient(IChannelHandlerContext peer)
+        {
+            var p = new TcpPeer(peer, trn);
+            return p;
         }
         public void RemoveAll()
         {
@@ -110,20 +116,27 @@ namespace Raft.Transport
                     if (handshake)
                     {
                         //sending back handshake ack
-                                                
-                        peer.Write(
-                            cSprot1Parser.GetSprot1Codec(
-                            new byte[] { 00, 03 }, (new TcpMsgHandshake()
-                            {
-                                NodeListeningPort = trn.port,
-                                NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
-                            }).SerializeBiser())
-                        );
+
+                        //peer.Write(
+                        //    cSprot1Parser.GetSprot1Codec(
+                        //    new byte[] { 00, 03 }, (new TcpMsgHandshake()
+                        //    {
+                        //        NodeListeningPort = trn.port,
+                        //        NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
+                        //    }).SerializeBiser())
+                        //);
+                        peer.Send(new TcpMsgHandshake()
+                        {
+                            NodeListeningPort = trn.port,
+                            NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
+                        });
                     }
                 }
                 else
                 {
-                    Peers[peer.EndPointSID].Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 05 }, null)); //ping
+                    //Peers[peer.EndPointSID].Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 05 }, null)); //ping
+
+                    Peers[peer.EndPointSID].Send("ping"); //ping
 
                     //removing incoming connection                    
                     peer.Dispose(true);
@@ -158,21 +171,28 @@ namespace Raft.Transport
             {
                 try
                 {
-                    TcpClient cl = new TcpClient();
+                    //TcpClient cl = new TcpClient();
                     if (this.IsMe(el))
                     {
                         continue;
                     }
-                    await cl.ConnectAsync(el.Host, el.Port);
-                    el.Peer = new TcpPeer(cl, trn);
+                   // await cl.ConnectAsync(el.Host, el.Port);
+                    el.Peer = new TcpPeer(el.Host, el.Port,this.trn);
+                    await el.Peer.Connect(el.Host, el.Port);
 
-                    el.Peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 01 }, (new TcpMsgHandshake()                    
+                    //el.Peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 01 }, (new TcpMsgHandshake()                    
+                    //{
+                    //    NodeListeningPort = trn.port,
+                    //    NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
+
+                    // }).SerializeBiser()));
+
+                    el.Peer.Send(new TcpMsgHandshake()
                     {
                         NodeListeningPort = trn.port,
                         NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
-                      
-                     }).SerializeBiser()));
 
+                     });
                     if (GlobalConfig.DebugNetwork)
                     {
                         var localname = this.trn.nodeName;
@@ -262,11 +282,13 @@ namespace Raft.Transport
 
                 foreach (var peer in peers)
                 {
-                    
-                    peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 02 },
-                        (
-                            new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
-                        ).SerializeBiser()), highPriority);
+
+                    //peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 02 },
+                    //    (
+                    //        new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
+                    //    ).SerializeBiser()), highPriority);
+
+                    peer.Send(new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -282,10 +304,11 @@ namespace Raft.Transport
                 TcpPeer peer = null;
                 if (Peers.TryGetValue(nodeAddress.EndPointSID, out peer))
                 {
-                    peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 02 },
-                       (
-                           new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
-                       ).SerializeBiser()));
+                    //peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 02 },
+                    //   (
+                    //       new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
+                    //   ).SerializeBiser()));
+                    peer.Send(new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -316,10 +339,12 @@ namespace Raft.Transport
 
                 foreach (var peer in peers)
                 {
-                    peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 04 },
-                        (
-                            new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
-                        ).SerializeBiser()));
+                    //peer.Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 04 },
+                    //    (
+                    //        new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
+                    //    ).SerializeBiser()));
+                    peer.Send(new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
+                        );
                 }
 
             }

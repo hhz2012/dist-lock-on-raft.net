@@ -5,31 +5,64 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
 using DBreeze.Utils;
+using DotNetty.Buffers;
+using DotNetty.Codecs;
+using DotNetty.Transport.Bootstrapping;
+using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Sockets;
+using Newtonsoft.Json;
 
 namespace Raft.Transport
 {
-    internal class TcpPeer:IDisposable
+    public class TcpPeer : IDisposable
     {
         TcpClient _client;
         NetworkStream stream = null;
+        IChannelHandlerContext _nettyclient;
+        IChannel clientChannel = null;
         cSprot1Parser _sprot1 = null;
-        TcpRaftNode trn = null;        
+        TcpRaftNode trn = null;
         public TcpMsgHandshake Handshake = null;
         public NodeAddress na = null;
         string _endPointSID = "";
 
-        public TcpPeer(TcpClient client, TcpRaftNode rn)
+        //public TcpPeer(TcpClient client, TcpRaftNode rn)
+        //{
+        //    _client = client;
+        //    trn = rn;
+        //    try
+        //    {
+        //        stream = _client.GetStream();
+        //        SetupSprot();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("can't connect to peer");
+        //        return;
+        //    }
+
+        //    trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) =>
+        //    {
+        //        //don't know why
+        //        //if (Handshake == null)
+        //        //this.Dispose();
+
+        //    }, null, true);
+
+        //    Task.Run(async () => await Read());
+        //}
+        public TcpPeer(IChannelHandlerContext client, TcpRaftNode rn)
         {
-            _client = client;
+            _nettyclient = client;
             trn = rn;
             try
             {
-                stream = _client.GetStream();
                 SetupSprot();
             }
             catch (Exception ex)
@@ -38,17 +71,16 @@ namespace Raft.Transport
                 return;
             }
 
-            trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) => 
+            trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) =>
             {
                 //don't know why
                 //if (Handshake == null)
-                    //this.Dispose();
+                //this.Dispose();
 
             }, null, true);
-                        
+
             Task.Run(async () => await Read());
         }
-
 
         /// <summary>
         /// Combination of remote (outgoing) ip and its local listening port
@@ -62,7 +94,7 @@ namespace Raft.Transport
                 if (Handshake == null)
                     return String.Empty;
                 var rep = _client.Client.RemoteEndPoint.ToString();
-                _endPointSID = rep.Substring(0, rep.IndexOf(':')+1) + Handshake.NodeListeningPort;
+                _endPointSID = rep.Substring(0, rep.IndexOf(':') + 1) + Handshake.NodeListeningPort;
                 return _endPointSID;
             }
         }
@@ -70,26 +102,47 @@ namespace Raft.Transport
         public TcpPeer(string hostname, int port, TcpRaftNode rn)
         {
             trn = rn;
-            Task.Run(async () => await Connect(hostname, port));
+            //Task.Run(async () => await Connect(hostname, port));
         }
 
-        async Task Connect(string hostname, int port)
+        //async Task Connect(string hostname, int port)
+        //{
+        //    _client = new TcpClient();
+        //    try
+        //    {
+        //        await _client.ConnectAsync(hostname, port);
+        //        stream = _client.GetStream();
+        //        SetupSprot();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return;
+        //    }
+
+        //    await Read();
+        //}
+        public  async Task Connect(string hostname, int port)
         {
-            _client = new TcpClient();
-            try
-            {
-                await _client.ConnectAsync(hostname, port);
-                stream = _client.GetStream();
-                SetupSprot();
-            }
-            catch (Exception ex)
-            {
-                return;
-            }
-
-            await Read();
+            var group = new MultithreadEventLoopGroup();
+            var bootstrap = new Bootstrap();
+            bootstrap
+            .Group(group)
+            .Channel<TcpSocketChannel>()
+            .Option(ChannelOption.TcpNodelay, true)
+            .Handler(
+                        new ActionChannelInitializer<ISocketChannel>(
+                             channel =>
+                             {
+                                 IChannelPipeline pipeline = channel.Pipeline;
+                              //   pipeline.AddLast(new LoggingHandler());
+                                 pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
+                                 pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
+                                 pipeline.AddLast("echo", new EchoClientHandler());
+                             }));
+             
+            IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
+            this.clientChannel = clientChannel;
         }
-
 
         void SetupSprot()
         {
@@ -107,16 +160,16 @@ namespace Raft.Transport
         {
             na = new NodeAddress() { NodeAddressId = Handshake.NodeListeningPort, NodeUId = Handshake.NodeUID, EndPointSID = this.EndPointSID };
         }
-        
+
         private void packetParser(int codec, byte[] data)
         {
-                 
+
             try
             {
                 switch (codec)
                 {
                     case 1: //Handshake
-                            
+
                         Handshake = TcpMsgHandshake.BiserDecode(data);
                         if (trn.GetNodeByEntityName("default").NodeAddress.NodeUId != this.Handshake.NodeUID)
                         {
@@ -126,15 +179,15 @@ namespace Raft.Transport
                             //    Description = $"{trn.port}> handshake from {this.Handshake.NodeListeningPort}"
                             //});
                         }
-                        trn.spider.AddPeerToClusterEndPoints(this,true);                        
+                        trn.spider.AddPeerToClusterEndPoints(this, true);
                         return;
                     case 2: //RaftMessage
 
                         if (this.na == null)
                             return;
-                        
+
                         var msg = TcpMsgRaft.BiserDecode(data);
-                        
+
                         Task.Run(() =>
                         {
                             try
@@ -143,7 +196,8 @@ namespace Raft.Transport
                                 if (node != null)
                                 {
                                     node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.Data);
-                                }else
+                                }
+                                else
                                 {
                                     Console.WriteLine("cant find node");
                                 }
@@ -162,8 +216,8 @@ namespace Raft.Transport
                         //    LogType = WarningLogEntry.eLogType.DEBUG,
                         //    Description = $"{trn.port}> ACK from {this.Handshake.NodeListeningPort}"
                         //});
-                        trn.spider.AddPeerToClusterEndPoints(this, false);                        
-                        
+                        trn.spider.AddPeerToClusterEndPoints(this, false);
+
                         return;
                     case 4: //Free Message protocol
 
@@ -178,7 +232,7 @@ namespace Raft.Transport
                         }
                         return;
                     case 5: //Ping
-                        
+
                         //if (na != null)
                         //{
                         //    trn.log.Log(new WarningLogEntry()
@@ -194,7 +248,7 @@ namespace Raft.Transport
             {
                 Dispose();
             }
-           
+
 
         }
 
@@ -226,9 +280,25 @@ namespace Raft.Transport
             }
 
             Task.Run(async () => { await Writer(); });
-
         }
-      
+        public void Send(object msg)
+        {
+            var text = Newtonsoft.Json.JsonConvert.SerializeObject(msg, new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                TypeNameHandling = TypeNameHandling.All,
+                TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
+            });
+            if (this._nettyclient != null)
+                this._nettyclient.WriteAndFlushAsync(text);
+            else if (this.clientChannel != null)
+                this.clientChannel.WriteAndFlushAsync(text);
+            else
+            {
+                Console.WriteLine("null connection");
+            }
+        }
+
         /// <summary>
         /// highPriorityQueue is served first
         /// </summary>
@@ -237,8 +307,8 @@ namespace Raft.Transport
         {
             if (this.Disposed)
                 return;
-            
-            byte[] sprot = null;            
+
+            byte[] sprot = null;
             try
             {
                 while (true)
@@ -251,15 +321,22 @@ namespace Raft.Transport
                             return;
                         }
 
-                        if(highPriorityQueue.Count>0)
+                        if (highPriorityQueue.Count > 0)
                             sprot = highPriorityQueue.Dequeue();
                         else
                             sprot = writerQueue.Dequeue();
                     }
 
                     //huge sprot should be splitted, packed into new sprot codec by chunks and supplied here as a standard chunk
-                    await stream.WriteAsync(sprot, 0, sprot.Length);//.ConfigureAwait(false);
-                    await stream.FlushAsync();//.ConfigureAwait(false);
+                    if (stream != null)
+                    {
+                        await stream.WriteAsync(sprot, 0, sprot.Length);//.ConfigureAwait(false);
+                        await stream.FlushAsync();//.ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await this._nettyclient.WriteAndFlushAsync(sprot);
+                    }
                 }
             }
             catch (Exception ex)
@@ -267,7 +344,7 @@ namespace Raft.Transport
                 Dispose();
             }
         }
-        
+
 
         async Task Read()
         {
@@ -276,7 +353,7 @@ namespace Raft.Transport
                 //Example of pure tcp
                 byte[] rbf = new byte[10000];
                 int a = 0;
-                if (stream==null)
+                if (stream == null)
                 {
                     Console.WriteLine("stream null");
                 }
@@ -285,7 +362,7 @@ namespace Raft.Transport
                     _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
                     _sprot1.PacketAnalizator(false);
                 }
-             
+
             }
             catch (System.Exception ex)
             {
@@ -295,7 +372,14 @@ namespace Raft.Transport
             }
 
         }
-        
+        public async Task OnRecieve(IChannelHandlerContext context, object message)
+        {
+            var buffer = message as IByteBuffer;
+            var msgstr = buffer.ToString(Encoding.UTF8);
+            //
+            var msgObj = Newtonsoft.Json.JsonConvert.DeserializeObject(msgstr);
+        }
+
         long disposed = 0;
 
         public bool Disposed
@@ -308,7 +392,7 @@ namespace Raft.Transport
         /// </summary>
         public void Dispose()
         {
-            this.Dispose(false,true);
+            this.Dispose(false, true);
         }
 
         /// <summary>
@@ -317,7 +401,7 @@ namespace Raft.Transport
         /// <param name="DontRemoveFromSpider"></param>
         /// <param name="calledFromDispose"></param>
         public void Dispose(bool DontRemoveFromSpider, bool calledFromDispose = false)
-        {  
+        {
             if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
                 return;
 
@@ -328,21 +412,21 @@ namespace Raft.Transport
             }
             catch (Exception ex)
             {
-                
+
             }
-          
+
             try
             {
                 if (stream != null)
-                {                    
+                {
                     stream.Dispose();
                     stream = null;
                 }
             }
             catch (Exception)
-            {}
+            { }
             try
-            {                
+            {
                 if (_client != null)
                 {
                     Console.WriteLine("client dispose");
@@ -366,7 +450,7 @@ namespace Raft.Transport
             catch (Exception)
             { }
 
-            if(!DontRemoveFromSpider && endpoint != null)
+            if (!DontRemoveFromSpider && endpoint != null)
                 trn.spider.RemovePeerFromClusterEndPoints(endpoint);
             //-------------  Last line
             if (!calledFromDispose)
@@ -375,4 +459,27 @@ namespace Raft.Transport
 
 
     }//eoc
+
+    public class EchoClientHandler : ChannelHandlerAdapter
+    {
+        readonly IByteBuffer initialMessage;
+
+        public override void ChannelActive(IChannelHandlerContext context) => context.WriteAndFlushAsync(this.initialMessage);
+
+        public override void ChannelRead(IChannelHandlerContext context, object message)
+        {
+            if (message is IByteBuffer byteBuffer)
+            {
+                Console.WriteLine("Received from server: " + byteBuffer.ToString(Encoding.UTF8));
+            }
+        }
+
+        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
+
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
+        {
+            Console.WriteLine("Exception: " + exception);
+            context.CloseAsync();
+        }
+    }
 }//eon
