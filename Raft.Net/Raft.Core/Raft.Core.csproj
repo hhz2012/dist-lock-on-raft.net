@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Transport\SPROT1.cs" />
     <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
   </ItemGroup>
 

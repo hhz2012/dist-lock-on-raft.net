@@ -13,7 +13,7 @@ using DBreeze.Utils;
 
 namespace Raft.Transport
 {    
-    public class TcpMsgRaft : Biser.IEncoder
+    public class TcpMsgRaft 
     {
         public TcpMsgRaft()
         {
@@ -25,49 +25,49 @@ namespace Raft.Transport
         /// </summary>      
         public eRaftSignalType RaftSignalType { get; set; }
                 
-        public byte[] Data { get; set; }
+        public object Data { get; set; }
 
         public string EntityName { get; set; } = "default";
 
-    public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        {
-            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+    //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+    //    {
+    //        Biser.Encoder enc = new Biser.Encoder(existingEncoder);
 
-            enc
-            .Add((int)RaftSignalType)
-            .Add(Data)
-            .Add(EntityName)
-            ;
-            return enc;
-        }
+    //        enc
+    //        .Add((int)RaftSignalType)
+    //        .Add(Data)
+    //        .Add(EntityName)
+    //        ;
+    //        return enc;
+    //    }
 
-        public static TcpMsgRaft BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                if (extDecoder.CheckNull())
-                    return null;
-                else
-                    decoder = extDecoder;
-            }
+    //    public static TcpMsgRaft BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+    //    {
+    //        Biser.Decoder decoder = null;
+    //        if (extDecoder == null)
+    //        {
+    //            if (enc == null || enc.Length == 0)
+    //                return null;
+    //            decoder = new Biser.Decoder(enc);
+    //            if (decoder.CheckNull())
+    //                return null;
+    //        }
+    //        else
+    //        {
+    //            if (extDecoder.CheckNull())
+    //                return null;
+    //            else
+    //                decoder = extDecoder;
+    //        }
 
-            TcpMsgRaft m = new TcpMsgRaft();  //!!!!!!!!!!!!!! change return type
+    //        TcpMsgRaft m = new TcpMsgRaft();  //!!!!!!!!!!!!!! change return type
 
-            m.RaftSignalType = (eRaftSignalType)decoder.GetInt();
-            m.Data = decoder.GetByteArray();
-            m.EntityName = decoder.GetString();
+    //        m.RaftSignalType = (eRaftSignalType)decoder.GetInt();
+    //        m.Data = decoder.GetByteArray();
+    //        m.EntityName = decoder.GetString();
 
-            return m;
-        }
+    //        return m;
+    //    }
     }
 
 }

@@ -13,7 +13,7 @@ using DBreeze.Utils;
 namespace Raft
 {
 
-    public class StateLogEntryApplied : Biser.IEncoder
+    public class StateLogEntryApplied 
     {
         public StateLogEntryApplied()
         {
@@ -30,46 +30,46 @@ namespace Raft
         public ulong StateLogEntryTerm { get; set; }
         
 
-        #region "Biser"
-        public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        {
-            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+        //#region "Biser"
+        //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+        //{
+        //    Biser.Encoder enc = new Biser.Encoder(existingEncoder);
 
-            enc
-            .Add(StateLogEntryId)
-            .Add(StateLogEntryTerm)
+        //    enc
+        //    .Add(StateLogEntryId)
+        //    .Add(StateLogEntryTerm)
             
-            ;
-            return enc;
-        }
+        //    ;
+        //    return enc;
+        //}
 
-        public static StateLogEntryApplied BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                if (extDecoder.CheckNull())
-                    return null;
-                else
-                    decoder = extDecoder;
-            }
+        //public static StateLogEntryApplied BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+        //{
+        //    Biser.Decoder decoder = null;
+        //    if (extDecoder == null)
+        //    {
+        //        if (enc == null || enc.Length == 0)
+        //            return null;
+        //        decoder = new Biser.Decoder(enc);
+        //        if (decoder.CheckNull())
+        //            return null;
+        //    }
+        //    else
+        //    {
+        //        if (extDecoder.CheckNull())
+        //            return null;
+        //        else
+        //            decoder = extDecoder;
+        //    }
 
-            StateLogEntryApplied m = new StateLogEntryApplied();  //!!!!!!!!!!!!!! change return type
+        //    StateLogEntryApplied m = new StateLogEntryApplied();  //!!!!!!!!!!!!!! change return type
 
-            m.StateLogEntryId = decoder.GetULong();
-            m.StateLogEntryTerm = decoder.GetULong();
+        //    m.StateLogEntryId = decoder.GetULong();
+        //    m.StateLogEntryTerm = decoder.GetULong();
            
 
-            return m;
-        }
-        #endregion
+        //    return m;
+        //}
+        //#endregion
     }
 }

@@ -24,7 +24,7 @@ namespace Raft
         /// <param name="senderNodeAddress"></param>
         /// <param name="entityName"></param>
         /// <param name="highPriority"></param>
-        void SendToAll(eRaftSignalType signalType, byte[] data, NodeAddress senderNodeAddress, string entityName, bool highPriority = false);
+        void SendToAll(eRaftSignalType signalType, object data, NodeAddress senderNodeAddress, string entityName, bool highPriority = false);
 
 
         /// <summary>
@@ -35,6 +35,6 @@ namespace Raft
         /// <param name="data"></param>
         /// <param name="senderNodeAddress"></param>
         /// <param name="entityName"></param>
-        void SendTo(NodeAddress nodeAddress,eRaftSignalType signalType, byte[] data, NodeAddress senderNodeAddress, string entityName);
+        void SendTo(NodeAddress nodeAddress,eRaftSignalType signalType, object data, NodeAddress senderNodeAddress, string entityName);
     }
 }

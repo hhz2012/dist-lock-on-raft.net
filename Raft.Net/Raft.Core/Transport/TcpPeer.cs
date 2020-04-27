@@ -26,7 +26,7 @@ namespace Raft.Transport
         NetworkStream stream = null;
         IChannelHandlerContext _nettyclient;
         IChannel clientChannel = null;
-        cSprot1Parser _sprot1 = null;
+        //cSprot1Parser _sprot1 = null;
         TcpRaftNode trn = null;
         public TcpMsgHandshake Handshake = null;
         public NodeAddress na = null;
@@ -112,17 +112,17 @@ namespace Raft.Transport
             this.clientChannel = clientChannel;
         }
 
-        void SetupSprot()
-        {
-            _sprot1 = new cSprot1Parser();
-            _sprot1.UseBigEndian = true;
-            _sprot1.DestroySelf = this.Dispose;
-           // _sprot1.packetParser = this.packetParser;
-            //_sprot1.MessageQueue = _tcpServerClient.__IncomingDataBuffer;
-            _sprot1.MaxPayLoad = 50000000; //this will be an approximate limitation for one command
-            _sprot1.DeviceShouldSendAuthorisationBytesBeforeProceedCodec = false;
-            _sprot1.ToSendToParserAuthenticationBytes = false;
-        }
+        //void SetupSprot()
+        //{
+        //    _sprot1 = new cSprot1Parser();
+        //    _sprot1.UseBigEndian = true;
+        //    _sprot1.DestroySelf = this.Dispose;
+        //   // _sprot1.packetParser = this.packetParser;
+        //    //_sprot1.MessageQueue = _tcpServerClient.__IncomingDataBuffer;
+        //    _sprot1.MaxPayLoad = 50000000; //this will be an approximate limitation for one command
+        //    _sprot1.DeviceShouldSendAuthorisationBytesBeforeProceedCodec = false;
+        //    _sprot1.ToSendToParserAuthenticationBytes = false;
+        //}
 
         internal void FillNodeAddress()
         {
@@ -308,32 +308,32 @@ namespace Raft.Transport
         }
 
 
-        async Task Read()
-        {
-            try
-            {
-                //Example of pure tcp
-                byte[] rbf = new byte[10000];
-                int a = 0;
-                if (stream == null)
-                {
-                    Console.WriteLine("stream null");
-                }
-                while ((a = await stream.ReadAsync(rbf, 0, rbf.Length)) > 0)
-                {
-                    _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
-                    _sprot1.PacketAnalizator(false);
-                }
+        //async Task Read()
+        //{
+        //    try
+        //    {
+        //        //Example of pure tcp
+        //        byte[] rbf = new byte[10000];
+        //        int a = 0;
+        //        if (stream == null)
+        //        {
+        //            Console.WriteLine("stream null");
+        //        }
+        //        while ((a = await stream.ReadAsync(rbf, 0, rbf.Length)) > 0)
+        //        {
+        //            _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
+        //            _sprot1.PacketAnalizator(false);
+        //        }
 
-            }
-            catch (System.Exception ex)
-            {
-                //Fires when remote client drops connection //Null reference  
-                Console.WriteLine(" error in tcp peer:" + ex.Message);
-                Dispose();
-            }
+        //    }
+        //    catch (System.Exception ex)
+        //    {
+        //        //Fires when remote client drops connection //Null reference  
+        //        Console.WriteLine(" error in tcp peer:" + ex.Message);
+        //        Dispose();
+        //    }
 
-        }
+        //}
         public async Task OnRecieve(IChannelHandlerContext context, string msgstr)
         {
             //
@@ -409,16 +409,16 @@ namespace Raft.Transport
 
             }
 
-            try
-            {
-                if (_sprot1 != null)
-                {
-                    _sprot1.MessageQueue.Clear();
-                    _sprot1 = null;
-                }
-            }
-            catch (Exception)
-            { }
+            //try
+            //{
+            //    if (_sprot1 != null)
+            //    {
+            //        _sprot1.MessageQueue.Clear();
+            //        _sprot1 = null;
+            //    }
+            //}
+            //catch (Exception)
+            //{ }
 
             if (!DontRemoveFromSpider && endpoint != null)
                 trn.spider.RemovePeerFromClusterEndPoints(endpoint);

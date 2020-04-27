@@ -8,7 +8,7 @@ using DBreeze.Utils;
 
 namespace Raft
 {    
-    public class StateLogEntryRedirectResponse: Biser.IEncoder
+    public class StateLogEntryRedirectResponse
     {
         public enum eResponseType
         {
@@ -30,44 +30,44 @@ namespace Raft
         
         //public ulong RedirectId { get; set; }
 
-        #region "Biser"
-        public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        {
-            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+        //#region "Biser"
+        //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+        //{
+        //    Biser.Encoder enc = new Biser.Encoder(existingEncoder);
 
-            enc
-            .Add((int)ResponseType)
-            //.Add(RedirectId)
-            ;
-            return enc;
-        }
+        //    enc
+        //    .Add((int)ResponseType)
+        //    //.Add(RedirectId)
+        //    ;
+        //    return enc;
+        //}
 
-        public static StateLogEntryRedirectResponse BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                decoder = extDecoder;
-                if (decoder.CheckNull())
-                    return null;
-            }
+        //public static StateLogEntryRedirectResponse BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+        //{
+        //    Biser.Decoder decoder = null;
+        //    if (extDecoder == null)
+        //    {
+        //        if (enc == null || enc.Length == 0)
+        //            return null;
+        //        decoder = new Biser.Decoder(enc);
+        //        if (decoder.CheckNull())
+        //            return null;
+        //    }
+        //    else
+        //    {
+        //        decoder = extDecoder;
+        //        if (decoder.CheckNull())
+        //            return null;
+        //    }
 
-            StateLogEntryRedirectResponse m = new StateLogEntryRedirectResponse();  //!!!!!!!!!!!!!! change return type
+        //    StateLogEntryRedirectResponse m = new StateLogEntryRedirectResponse();  //!!!!!!!!!!!!!! change return type
 
-            m.ResponseType = (eResponseType)decoder.GetInt();
-            //m.RedirectId = decoder.GetULong();
+        //    m.ResponseType = (eResponseType)decoder.GetInt();
+        //    //m.RedirectId = decoder.GetULong();
 
-            return m;
-        }
-        #endregion
+        //    return m;
+        //}
+        //#endregion
 
     }
 }

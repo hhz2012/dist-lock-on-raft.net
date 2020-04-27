@@ -13,7 +13,7 @@ using DBreeze.Utils;
 namespace Raft
 {
     
-    internal class CandidateRequest: Biser.IEncoder
+    internal class CandidateRequest
     {
         public CandidateRequest()
         {
@@ -37,44 +37,44 @@ namespace Raft
         /// </summary>        
         public ulong LastTermId { get; set; }
 
-        public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        {
-            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+        //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+        //{
+        //    Biser.Encoder enc = new Biser.Encoder(existingEncoder);
 
-            enc
-            .Add(TermId)
-            .Add(LastLogId)
-            .Add(LastTermId)
-            ;
-            return enc;
-        }
+        //    enc
+        //    .Add(TermId)
+        //    .Add(LastLogId)
+        //    .Add(LastTermId)
+        //    ;
+        //    return enc;
+        //}
 
-        public static CandidateRequest BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                if (extDecoder.CheckNull())
-                    return null;
-                else
-                    decoder = extDecoder;
-            }
+        //public static CandidateRequest BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+        //{
+        //    Biser.Decoder decoder = null;
+        //    if (extDecoder == null)
+        //    {
+        //        if (enc == null || enc.Length == 0)
+        //            return null;
+        //        decoder = new Biser.Decoder(enc);
+        //        if (decoder.CheckNull())
+        //            return null;
+        //    }
+        //    else
+        //    {
+        //        if (extDecoder.CheckNull())
+        //            return null;
+        //        else
+        //            decoder = extDecoder;
+        //    }
 
-            CandidateRequest m = new CandidateRequest();  //!!!!!!!!!!!!!! change return type
+        //    CandidateRequest m = new CandidateRequest();  //!!!!!!!!!!!!!! change return type
 
-            m.TermId = decoder.GetULong();
-            m.LastLogId = decoder.GetULong();
-            m.LastTermId = decoder.GetULong();           
+        //    m.TermId = decoder.GetULong();
+        //    m.LastLogId = decoder.GetULong();
+        //    m.LastTermId = decoder.GetULong();           
 
-            return m;
-        }
+        //    return m;
+        //}
     }
 }

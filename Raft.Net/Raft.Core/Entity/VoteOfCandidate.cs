@@ -12,7 +12,7 @@ using DBreeze.Utils;
 
 namespace Raft
 {   
-    internal class VoteOfCandidate :Biser.IEncoder
+    internal class VoteOfCandidate 
     {
         public enum eVoteType
         {
@@ -36,42 +36,42 @@ namespace Raft
         public eVoteType VoteType { get; set; }
 
 
-        public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        {
-            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+        //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+        //{
+        //    Biser.Encoder enc = new Biser.Encoder(existingEncoder);
 
-            enc
-            .Add(TermId)
-            .Add((int)VoteType)            
-            ;
-            return enc;
-        }
+        //    enc
+        //    .Add(TermId)
+        //    .Add((int)VoteType)            
+        //    ;
+        //    return enc;
+        //}
 
-        public static VoteOfCandidate BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        {
-            Biser.Decoder decoder = null;
-            if (extDecoder == null)
-            {
-                if (enc == null || enc.Length == 0)
-                    return null;
-                decoder = new Biser.Decoder(enc);
-                if (decoder.CheckNull())
-                    return null;
-            }
-            else
-            {
-                if (extDecoder.CheckNull())
-                    return null;
-                else
-                    decoder = extDecoder;
-            }
+        //public static VoteOfCandidate BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+        //{
+        //    Biser.Decoder decoder = null;
+        //    if (extDecoder == null)
+        //    {
+        //        if (enc == null || enc.Length == 0)
+        //            return null;
+        //        decoder = new Biser.Decoder(enc);
+        //        if (decoder.CheckNull())
+        //            return null;
+        //    }
+        //    else
+        //    {
+        //        if (extDecoder.CheckNull())
+        //            return null;
+        //        else
+        //            decoder = extDecoder;
+        //    }
 
-            VoteOfCandidate m = new VoteOfCandidate();  //!!!!!!!!!!!!!! change return type
+        //    VoteOfCandidate m = new VoteOfCandidate();  //!!!!!!!!!!!!!! change return type
 
-            m.TermId = decoder.GetULong();
-            m.VoteType = (eVoteType)decoder.GetInt();
+        //    m.TermId = decoder.GetULong();
+        //    m.VoteType = (eVoteType)decoder.GetInt();
          
-            return m;
-        }
+        //    return m;
+        //}
     }
 }

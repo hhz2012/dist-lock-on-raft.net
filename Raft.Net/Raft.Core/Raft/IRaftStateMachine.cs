@@ -19,6 +19,6 @@ namespace Raft
         /// <param name="address">Address of the node-sender</param>
         /// <param name="signalType"></param>
         /// <param name="data"></param>
-        void IncomingSignalHandler(NodeAddress address, eRaftSignalType signalType, byte[] data);
+        void IncomingSignalHandler(NodeAddress address, eRaftSignalType signalType, object data);
     }
 }

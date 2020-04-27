@@ -247,7 +247,7 @@ namespace Raft.Transport
             }
         }
 
-        public void SendToAll(eRaftSignalType signalType, byte[] data, NodeAddress senderNodeAddress, string entityName, bool highPriority = false)
+        public void SendToAll(eRaftSignalType signalType, object data, NodeAddress senderNodeAddress, string entityName, bool highPriority = false)
         {
             try
             {
@@ -283,7 +283,7 @@ namespace Raft.Transport
             }
         }
 
-        public void SendTo(NodeAddress nodeAddress, eRaftSignalType signalType, byte[] data, NodeAddress senderNodeAddress, string entityName)
+        public void SendTo(NodeAddress nodeAddress, eRaftSignalType signalType,object data, NodeAddress senderNodeAddress, string entityName)
         {
             try
             {
