@@ -44,7 +44,7 @@ namespace Raft
         /// <summary>
         /// If AddResult is NODE_NOT_A_LEADER
         /// </summary>
-        public NodeAddress LeaderAddress { get; set; }
+        public NodeRaftAddress LeaderAddress { get; set; }
 
         ///// <summary>
         ///// 

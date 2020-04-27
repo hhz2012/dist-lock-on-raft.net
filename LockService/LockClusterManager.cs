@@ -40,10 +40,10 @@ namespace LockService
             List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
             for (int i = 0; i < num; i++)
             {
-                List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
+                List<PeerEndPoint> eps = new List<PeerEndPoint>();
                 //every node have seperate configuration
                 for (int index = 0; index < num; index++)
-                    eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
+                    eps.Add(new PeerEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
 
                 lock (sync_nodes)
                 {

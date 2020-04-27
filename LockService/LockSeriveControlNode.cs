@@ -76,11 +76,11 @@ namespace LockService
                 DelayedPersistenceIsActive = true,
             };
             List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
-            List<TcpClusterEndPoint> eps = new List<TcpClusterEndPoint>();
+            List<PeerEndPoint> eps = new List<PeerEndPoint>();
             //every node have seperate configuration
             var order = command.Targets.IndexOf(this.nodeName);
             for (int index = 0; index < command.IpAddress.Count; index++)
-                    eps.Add(new TcpClusterEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
+                    eps.Add(new PeerEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
             int Port = eps[order].Port;
             var nodeName = this.nodeName + "_worker";
             this.wrk=new RaftNode(

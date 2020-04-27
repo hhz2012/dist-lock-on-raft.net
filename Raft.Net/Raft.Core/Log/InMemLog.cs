@@ -71,7 +71,7 @@ namespace Raft.Core.StateMachine
             throw new NotImplementedException();
         }
 
-        public StateLog.eEntryAcceptanceResult EntryIsAccepted(NodeAddress address, uint majorityQuantity, StateLogEntryApplied applied)
+        public StateLog.eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied)
         {
             throw new NotImplementedException();
         }

@@ -680,7 +680,7 @@ namespace Raft
         /// <param name="majorityNumber"></param>
         /// <param name="LogId"></param>
         /// <param name="TermId"></param>        
-        public eEntryAcceptanceResult EntryIsAccepted(NodeAddress address, uint majorityQuantity, StateLogEntryApplied applied)
+        public eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied)
         {
             //If we receive acceptance signals of already Committed entries, we just ignore them
             if (applied.StateLogEntryId <= this.LastCommittedIndex)

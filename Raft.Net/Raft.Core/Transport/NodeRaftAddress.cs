@@ -14,19 +14,16 @@ namespace Raft
     /// <summary>
     /// Node destination address
     /// </summary>
-    public class NodeAddress
+    public class NodeRaftAddress
     {
-
-        public NodeAddress()
+        public NodeRaftAddress()
         {            
             NodeAddressId = -1;
         }
-
         /// <summary>
         /// 
         /// </summary>
         public long NodeAddressId { get; set; }
-
         /// <summary>
         /// GUID, substring 4,8 converted to int64
         /// Helps to resolve priority conflicts
@@ -34,7 +31,5 @@ namespace Raft
         public long NodeUId { get; set; }
 
         public string EndPointSID { get; set; }
-        
-
     }
 }

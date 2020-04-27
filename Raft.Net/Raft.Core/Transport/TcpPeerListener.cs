@@ -47,7 +47,7 @@ namespace Raft.Core.Transport
                         //业务handler ，这里是实际处理Echo业务的Handler
                         //pipeline.AddLast("echo", new EchoServerHandler());
                         pipeline.AddLast(new StringEncoder(), new StringDecoder());
-                        pipeline.AddLast("echo", new EchoServerHandler(network));
+                        pipeline.AddLast("echo", new PeerMessageHandler(network));
                     }));
 
                 // bootstrap绑定到指定端口的行为 就是服务端启动服务，同样的Serverbootstrap可以bind到多个端口
@@ -60,38 +60,5 @@ namespace Raft.Core.Transport
             }
         }
     }
-    public class EchoServerHandler : ChannelHandlerAdapter //管道处理基类，较常用
-    {
-        TcpPeerNetwork connector = null;
-        public EchoServerHandler(TcpPeerNetwork connector)
-        {
-            this.connector = connector;
-        }
-        TcpPeer peer = null;
-        //	重写基类的方法，当消息到达时触发，这里收到消息后，在控制台输出收到的内容，并原样返回了客户端
-        public override void ChannelRead(IChannelHandlerContext context, object message)
-        {
-            var str = message as string;
-            if (peer == null)
-            {
-                peer = connector.AddTcpClient(context);
-                peer.OnRecieve(context, str).ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-            else
-            {
-                peer.OnRecieve(context, str).ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-
-        }
-
-        // 输出到客户端，也可以在上面的方法中直接调用WriteAndFlushAsync方法直接输出
-        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
-
-        //捕获 异常，并输出到控制台后断开链接，提示：客户端意外断开链接，也会触发
-        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
-        {
-            Console.WriteLine("Exception: " + exception);
-            context.CloseAsync();
-        }
-    }
+  
 }

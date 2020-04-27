@@ -89,11 +89,11 @@ namespace Raft
         /// <summary>
         /// Address of the current node
         /// </summary>
-        public NodeAddress NodeAddress = new NodeAddress();
+        public NodeRaftAddress NodeAddress = new NodeRaftAddress();
         /// <summary>
         /// In case if current node is not Leader. It holds leader address
         /// </summary>
-        NodeAddress LeaderNodeAddress = null;
+        NodeRaftAddress LeaderNodeAddress = null;
         /// <summary>
         /// Received Current leader heartbeat time
         /// </summary>
@@ -275,10 +275,10 @@ namespace Raft
         /// <summary>
         /// Returns Leader node address
         /// </summary>
-        public NodeAddress LeaderNode
+        public NodeRaftAddress LeaderNode
         {
             get {
-                NodeAddress na = null;
+                NodeRaftAddress na = null;
                 lock (lock_Operations)
                 {
                     if (Election_TimerId == 0)
@@ -366,7 +366,7 @@ namespace Raft
         /// <param name="address">Address of the node who sent the signal</param>
         /// <param name="signalType"></param>
         /// <param name="data"></param>
-        public void IncomingSignalHandler(NodeAddress address, eRaftSignalType signalType, object data)
+        public void IncomingSignalHandler(NodeRaftAddress address, eRaftSignalType signalType, object data)
         {
             try
             {
@@ -515,7 +515,7 @@ namespace Raft
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseStateLogEntryRequest(NodeAddress address, object data)
+        void ParseStateLogEntryRequest(NodeRaftAddress address, object data)
         {
             if (this.NodeState != eNodeState.Leader)
                 return;
@@ -539,7 +539,7 @@ namespace Raft
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseStateLogEntrySuggestion(NodeAddress address, object data)
+        void ParseStateLogEntrySuggestion(NodeRaftAddress address, object data)
         {
             if (this.NodeState != eNodeState.Follower)
                 return;
@@ -614,7 +614,7 @@ namespace Raft
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseLeaderHeartbeat(NodeAddress address, object data)
+        void ParseLeaderHeartbeat(NodeRaftAddress address, object data)
         {
             //var LeaderHeartbeat = data.DeserializeProtobuf<LeaderHeartbeat>();
             this.LeaderHeartbeat = data as LeaderHeartbeat; //data.DeserializeProtobuf<LeaderHeartbeat>();
@@ -786,7 +786,7 @@ namespace Raft
         /// Is called from tryCatch and in lock
         /// </summary>
         /// <param name="data"></param>
-        void ParseCandidateRequest(NodeAddress address, object data)
+        void ParseCandidateRequest(NodeRaftAddress address, object data)
         {
             var req = data as CandidateRequest; 
             VoteOfCandidate vote = new VoteOfCandidate();
@@ -884,7 +884,7 @@ namespace Raft
         /// Is called from tryCatch and in lock
         /// </summary>
         /// <param name="data"></param>
-        void ParseVoteOfCandidate(NodeAddress address, object data)
+        void ParseVoteOfCandidate(NodeRaftAddress address, object data)
         {
             //Node received a node
             var vote = data as VoteOfCandidate;
@@ -946,7 +946,7 @@ namespace Raft
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseStateLogRedirectRequest(NodeAddress address, object data)
+        void ParseStateLogRedirectRequest(NodeRaftAddress address, object data)
         {
             StateLogEntryRedirectRequest req = data as StateLogEntryRedirectRequest;
             //StateLogEntryRedirectResponse resp = new StateLogEntryRedirectResponse(); //{ RedirectId = req.RedirectId };
@@ -965,7 +965,7 @@ namespace Raft
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseStateLogEntryAccepted(NodeAddress address, object data)
+        void ParseStateLogEntryAccepted(NodeRaftAddress address, object data)
         {
 
             if (this.NodeState != eNodeState.Leader)

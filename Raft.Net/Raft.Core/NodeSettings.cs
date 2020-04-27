@@ -17,7 +17,7 @@ namespace Raft
         /// <summary>
         /// Quantity of Cluster EndPoints is used to get majority of servers to Commit Entity
         /// </summary>
-        public List<TcpClusterEndPoint> TcpClusterEndPoints { get; set; } = new List<TcpClusterEndPoint>();
+        public List<PeerEndPoint> TcpClusterEndPoints { get; set; } = new List<PeerEndPoint>();
 
         
 

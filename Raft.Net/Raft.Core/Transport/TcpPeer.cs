@@ -23,7 +23,7 @@ namespace Raft.Transport
         //cSprot1Parser _sprot1 = null;
         RaftNode trn = null;
         public TcpMsgHandshake Handshake = null;
-        public NodeAddress na = null;
+        public NodeRaftAddress na = null;
         string _endPointSID = "";
 
         public TcpPeer(IChannelHandlerContext client, RaftNode rn)
@@ -91,7 +91,7 @@ namespace Raft.Transport
 
         internal void FillNodeAddress()
         {
-            na = new NodeAddress() { NodeAddressId = Handshake.NodeListeningPort, NodeUId = Handshake.NodeUID, EndPointSID = this.EndPointSID };
+            na = new NodeRaftAddress() { NodeAddressId = Handshake.NodeListeningPort, NodeUId = Handshake.NodeUID, EndPointSID = this.EndPointSID };
         }
 
         private void packetParser(RaftCommand message)

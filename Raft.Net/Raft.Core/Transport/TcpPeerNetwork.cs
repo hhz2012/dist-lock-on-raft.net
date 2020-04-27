@@ -137,12 +137,12 @@ namespace Raft.Transport
             await HandshakeTo(trn.NodeSettings.TcpClusterEndPoints);
             trn.GetNodeByEntityName("default").TM.FireEventEach(3000, RetestConnections, null, false);
         }
-        public bool IsMe(TcpClusterEndPoint endPoint)
+        public bool IsMe(PeerEndPoint endPoint)
         {
             if (this.trn.port == endPoint.Port) return true;
             return false;
         }
-        async Task HandshakeTo(List<TcpClusterEndPoint> clusterEndPoints)        
+        async Task HandshakeTo(List<PeerEndPoint> clusterEndPoints)        
         {
             foreach (var el in clusterEndPoints)
             {
@@ -213,7 +213,7 @@ namespace Raft.Transport
                     return;
 
                 var list2Lookup = new HashSet<string>(peers.Select(r => r?.EndPointSID));
-                var ws = trn.NodeSettings.TcpClusterEndPoints.Where(r => !r.Me && (!list2Lookup.Contains(r.EndPointSID))).ToList();
+                var ws = trn.NodeSettings.TcpClusterEndPoints.Where(r => (!list2Lookup.Contains(r.EndPointSID))).ToList();
 
                 if (ws.Count > 0)
                 {                    
@@ -225,7 +225,7 @@ namespace Raft.Transport
 
             }
         }
-        public void SendToAll(eRaftSignalType signalType, object data, NodeAddress senderNodeAddress, string entityName, bool highPriority = false)
+        public void SendToAll(eRaftSignalType signalType, object data, NodeRaftAddress senderNodeAddress, string entityName, bool highPriority = false)
         {
             try
             {
@@ -255,7 +255,7 @@ namespace Raft.Transport
             }
         }
 
-        public void SendTo(NodeAddress nodeAddress, eRaftSignalType signalType,object data, NodeAddress senderNodeAddress, string entityName)
+        public void SendTo(NodeRaftAddress nodeAddress, eRaftSignalType signalType,object data, NodeRaftAddress senderNodeAddress, string entityName)
         {
             try
             {
@@ -270,7 +270,7 @@ namespace Raft.Transport
             }
         }
 
-        public void SendToAllFreeMessage(string msgType, string dataString="", byte[] data=null, NodeAddress senderNodeAddress = null)
+        public void SendToAllFreeMessage(string msgType, string dataString="", byte[] data=null, NodeRaftAddress senderNodeAddress = null)
         {
             try
             {

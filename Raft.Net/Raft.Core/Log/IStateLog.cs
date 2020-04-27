@@ -36,7 +36,7 @@ namespace Raft
         void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
         void Dispose();
-        StateLog.eEntryAcceptanceResult EntryIsAccepted(NodeAddress address, uint majorityQuantity, StateLogEntryApplied applied);
+        StateLog.eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
         void FlushSleCache();
         StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
         StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
