@@ -137,7 +137,9 @@ namespace Raft.Transport
                               //   pipeline.AddLast(new LoggingHandler());
                                  pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
                                  pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
-                                 pipeline.AddLast("echo", new EchoClientHandler());
+                                 pipeline.AddLast(new StringEncoder(), new StringDecoder());
+
+                                pipeline.AddLast("echo", new EchoClientHandler());
                              }));
              
             IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
@@ -149,7 +151,7 @@ namespace Raft.Transport
             _sprot1 = new cSprot1Parser();
             _sprot1.UseBigEndian = true;
             _sprot1.DestroySelf = this.Dispose;
-            _sprot1.packetParser = this.packetParser;
+           // _sprot1.packetParser = this.packetParser;
             //_sprot1.MessageQueue = _tcpServerClient.__IncomingDataBuffer;
             _sprot1.MaxPayLoad = 50000000; //this will be an approximate limitation for one command
             _sprot1.DeviceShouldSendAuthorisationBytesBeforeProceedCodec = false;
@@ -161,16 +163,16 @@ namespace Raft.Transport
             na = new NodeAddress() { NodeAddressId = Handshake.NodeListeningPort, NodeUId = Handshake.NodeUID, EndPointSID = this.EndPointSID };
         }
 
-        private void packetParser(int codec, byte[] data)
+        private void packetParser(RaftCommand message)
         {
-
+            
             try
             {
-                switch (codec)
+                switch (message.Code)
                 {
                     case 1: //Handshake
 
-                        Handshake = TcpMsgHandshake.BiserDecode(data);
+                        Handshake = message.Message as TcpMsgHandshake;
                         if (trn.GetNodeByEntityName("default").NodeAddress.NodeUId != this.Handshake.NodeUID)
                         {
                             //trn.log.Log(new WarningLogEntry()
@@ -186,7 +188,7 @@ namespace Raft.Transport
                         if (this.na == null)
                             return;
 
-                        var msg = TcpMsgRaft.BiserDecode(data);
+                        var msg = message.Message as TcpMsgRaft;
 
                         Task.Run(() =>
                         {
@@ -210,7 +212,7 @@ namespace Raft.Transport
                         return;
                     case 3: //Handshake ACK
 
-                        Handshake = TcpMsgHandshake.BiserDecode(data);
+                        Handshake = message.Message as TcpMsgHandshake;
                         //trn.log.Log(new WarningLogEntry()
                         //{
                         //    LogType = WarningLogEntry.eLogType.DEBUG,
@@ -221,7 +223,7 @@ namespace Raft.Transport
                         return;
                     case 4: //Free Message protocol
 
-                        var Tcpmsg = TcpMsg.BiserDecode(data);
+                        var Tcpmsg = message.Message as TcpMsg;
                         if (na != null)
                         {
                             trn.log.Log(new WarningLogEntry()
@@ -281,18 +283,28 @@ namespace Raft.Transport
 
             Task.Run(async () => { await Writer(); });
         }
-        public void Send(object msg)
+        public void Send(int Command,object msg)
         {
-            var text = Newtonsoft.Json.JsonConvert.SerializeObject(msg, new JsonSerializerSettings()
+            RaftCommand cmd = new RaftCommand()
+            {
+                Code = Command,
+                Message = msg
+            };
+            var text = Newtonsoft.Json.JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
             {
                 NullValueHandling = NullValueHandling.Ignore,
                 TypeNameHandling = TypeNameHandling.All,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
             });
+
+           // var data = System.Text.Encoding.UTF8.GetBytes("hello world");
             if (this._nettyclient != null)
                 this._nettyclient.WriteAndFlushAsync(text);
             else if (this.clientChannel != null)
+            {
                 this.clientChannel.WriteAndFlushAsync(text);
+                
+            }
             else
             {
                 Console.WriteLine("null connection");
@@ -372,12 +384,20 @@ namespace Raft.Transport
             }
 
         }
-        public async Task OnRecieve(IChannelHandlerContext context, object message)
+        public async Task OnRecieve(IChannelHandlerContext context, string msgstr)
         {
-            var buffer = message as IByteBuffer;
-            var msgstr = buffer.ToString(Encoding.UTF8);
             //
-            var msgObj = Newtonsoft.Json.JsonConvert.DeserializeObject(msgstr);
+            if (!string.IsNullOrEmpty(msgstr))
+            {
+                RaftCommand  msgObj = Newtonsoft.Json.JsonConvert.DeserializeObject<RaftCommand>(msgstr, new JsonSerializerSettings()
+                {
+                    NullValueHandling = NullValueHandling.Ignore,
+                    TypeNameHandling = TypeNameHandling.All,
+                    TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
+                }
+                );
+                this.packetParser(msgObj as RaftCommand);
+            }
         }
 
         long disposed = 0;
@@ -464,14 +484,21 @@ namespace Raft.Transport
     {
         readonly IByteBuffer initialMessage;
 
+        public EchoClientHandler()
+        {
+           // this.initialMessage = Unpooled.Buffer(1000);
+          //  byte[] messageBytes = Encoding.UTF8.GetBytes("Hello world");
+           // this.initialMessage.WriteBytes(messageBytes);
+        }
+
+
         public override void ChannelActive(IChannelHandlerContext context) => context.WriteAndFlushAsync(this.initialMessage);
 
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
-            if (message is IByteBuffer byteBuffer)
-            {
-                Console.WriteLine("Received from server: " + byteBuffer.ToString(Encoding.UTF8));
-            }
+            
+                Console.WriteLine("Received from server: " + message);
+            
         }
 
         public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
@@ -481,5 +508,10 @@ namespace Raft.Transport
             Console.WriteLine("Exception: " + exception);
             context.CloseAsync();
         }
+    }
+    public class RaftCommand
+    {
+        public int Code { get; set; }
+        public object Message { get; set; }
     }
 }//eon

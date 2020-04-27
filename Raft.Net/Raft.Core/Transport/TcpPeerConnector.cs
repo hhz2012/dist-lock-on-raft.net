@@ -125,7 +125,7 @@ namespace Raft.Transport
                         //        NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
                         //    }).SerializeBiser())
                         //);
-                        peer.Send(new TcpMsgHandshake()
+                        peer.Send(3,new TcpMsgHandshake()
                         {
                             NodeListeningPort = trn.port,
                             NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
@@ -136,7 +136,7 @@ namespace Raft.Transport
                 {
                     //Peers[peer.EndPointSID].Write(cSprot1Parser.GetSprot1Codec(new byte[] { 00, 05 }, null)); //ping
 
-                    Peers[peer.EndPointSID].Send("ping"); //ping
+                    Peers[peer.EndPointSID].Send(5,"ping"); //ping
 
                     //removing incoming connection                    
                     peer.Dispose(true);
@@ -187,7 +187,7 @@ namespace Raft.Transport
 
                     // }).SerializeBiser()));
 
-                    el.Peer.Send(new TcpMsgHandshake()
+                    el.Peer.Send(1,new TcpMsgHandshake()
                     {
                         NodeListeningPort = trn.port,
                         NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
@@ -288,7 +288,7 @@ namespace Raft.Transport
                     //        new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
                     //    ).SerializeBiser()), highPriority);
 
-                    peer.Send(new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(2,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -308,7 +308,7 @@ namespace Raft.Transport
                     //   (
                     //       new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data }
                     //   ).SerializeBiser()));
-                    peer.Send(new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(2,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -343,7 +343,7 @@ namespace Raft.Transport
                     //    (
                     //        new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
                     //    ).SerializeBiser()));
-                    peer.Send(new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
+                    peer.Send(4,new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data }
                         );
                 }
 
