@@ -108,7 +108,7 @@ namespace Raft.Transport
 
                     if (handshake)
                     {
-                        peer.Send(3,new TcpMsgHandshake()
+                        peer.Send(RaftCommand.HandshakeACK,new TcpMsgHandshake()
                         {
                             NodeListeningPort = trn.port,
                             NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
@@ -117,7 +117,7 @@ namespace Raft.Transport
                 }
                 else
                 {
-                    Peers[peer.EndPointSID].Send(5,"ping"); //ping
+                    Peers[peer.EndPointSID].Send(RaftCommand.Ping,"ping"); //ping
                     //removing incoming connection                    
                     peer.Dispose(true);
                     return;
@@ -156,7 +156,7 @@ namespace Raft.Transport
                    // await cl.ConnectAsync(el.Host, el.Port);
                     el.Peer = new TcpPeer(el.Host, el.Port,this.trn);
                     await el.Peer.Connect(el.Host, el.Port);
-                    el.Peer.Send(1,new TcpMsgHandshake()
+                    el.Peer.Send(RaftCommand.Handshake, new TcpMsgHandshake()
                     {
                         NodeListeningPort = trn.port,
                         NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
@@ -246,7 +246,7 @@ namespace Raft.Transport
 
                 foreach (var peer in peers)
                 {
-                    peer.Send(2,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -262,7 +262,7 @@ namespace Raft.Transport
                 TcpPeer peer = null;
                 if (Peers.TryGetValue(nodeAddress.EndPointSID, out peer))
                 {
-                    peer.Send(2,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
                 }
             }
             catch (Exception ex)
@@ -291,7 +291,7 @@ namespace Raft.Transport
 
                 foreach (var peer in peers)
                 {
-                    peer.Send(4,new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data });
+                    peer.Send(RaftCommand.FreeMessage,new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data });
                 }
 
             }

@@ -64,9 +64,7 @@ namespace Raft.Transport
         public TcpPeer(string hostname, int port, RaftNode rn)
         {
             trn = rn;
-           
         }
-
         public  async Task Connect(string hostname, int port)
         {
             var group = new MultithreadEventLoopGroup();
@@ -83,10 +81,8 @@ namespace Raft.Transport
                                  pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
                                  pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
                                  pipeline.AddLast(new StringEncoder(), new StringDecoder());
-
-                                pipeline.AddLast("echo", new PeerMessageHandler(this));
+                                 pipeline.AddLast("echo", new PeerMessageHandler(this));
                              }));
-             
             IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
             this.clientChannel = clientChannel;
         }
@@ -98,17 +94,16 @@ namespace Raft.Transport
 
         private void packetParser(RaftCommand message)
         {
-            
             try
             {
                 switch (message.Code)
                 {
-                    case 1: //Handshake
+                    case RaftCommand.Handshake: //Handshake
 
                         Handshake = message.Message as TcpMsgHandshake;
                         trn.spider.AddPeerToClusterEndPoints(this, true);
                         return;
-                    case 2: //RaftMessage
+                    case RaftCommand.RaftMessage: //RaftMessage
 
                         if (this.na == null)
                             return;
@@ -133,13 +128,11 @@ namespace Raft.Transport
                             }
                         });
                         return;
-                    case 3: //Handshake ACK
-
+                    case RaftCommand.HandshakeACK: //Handshake ACK
                         Handshake = message.Message as TcpMsgHandshake;
                         trn.spider.AddPeerToClusterEndPoints(this, false);
                         return;
-                    case 4: //Free Message protocol
-
+                    case RaftCommand.FreeMessage: //Free Message protocol
                         var Tcpmsg = message.Message as TcpMsg;
                         if (na != null)
                         {
@@ -150,7 +143,7 @@ namespace Raft.Transport
                             });
                         }
                         return;
-                    case 5: //Ping
+                    case RaftCommand.Ping: //Ping
                         return;
                 }
             }
