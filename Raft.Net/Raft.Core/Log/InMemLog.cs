@@ -266,7 +266,6 @@ namespace Raft.Core.StateMachine
                 if (removeFromIndex > 0)
                     inMem.Remove(inMem.SelectBackwardFromTo(removeFromIndex - 1, ulong.MaxValue, true, 0, 0).ToList());
             }
-
         }
 
         /// <summary>
@@ -287,8 +286,6 @@ namespace Raft.Core.StateMachine
             return le;
 
         }
-
-
         /// <summary>
         /// +
         /// Get Term by EntryLogIndex. Returns First element false if not found, Second - Term (if found).

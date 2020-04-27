@@ -156,7 +156,6 @@ namespace Raft.Transport
                     default:
                         resp.Dispose_MRE();
                         AsyncResponseHandler.df.TryRemove(msgIdStr, out resp);
-
                         return false;
                 }
             }

@@ -16,8 +16,6 @@ namespace Raft
 
     public class StateLog : IDisposable, IStateLog
     {
-       
-
         /// <summary>
         /// Main table that stores logs
         /// </summary>
@@ -26,10 +24,7 @@ namespace Raft
         ///// <summary>
         ///// Leader only. Stores logs before being distributed.
         ///// </summary>
-
-        internal RaftStateMachine rn = null;
-
-
+        internal RaftStateMachine statemachine = null;
         /// <summary>
         /// Holds last committed State Log Index.
         /// If node is leader it sets it, if follower it comes with the Leader's heartbeat
@@ -92,7 +87,7 @@ namespace Raft
         DBreezeEngine db = null;
         public StateLog(RaftStateMachine rn, DBreezeEngine dbEngine)
         {
-            this.rn = rn;
+            this.statemachine = rn;
             this.db = dbEngine;
 
             if (rn.entitySettings.EntityName != "default")
@@ -159,7 +154,7 @@ namespace Raft
             return new StateLogEntrySuggestion()
             {
                 StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
-                LeaderTerm = rn.NodeTerm
+                LeaderTerm = statemachine.NodeTerm
             };
         }
         ulong tempPrevStateLogId = 0;
@@ -191,7 +186,7 @@ namespace Raft
             tempPrevStateLogTerm = tempStateLogTerm;
 
             tempStateLogId++;
-            tempStateLogTerm = rn.NodeTerm;
+            tempStateLogTerm = statemachine.NodeTerm;
 
             StateLogEntry le = new StateLogEntry()
             {
@@ -273,7 +268,7 @@ namespace Raft
                         return false;
                 }
                 if (populateFrom > 0)
-                    this.rn.Commited();
+                    this.statemachine.Commited();
             }
             return true;
         }
@@ -307,11 +302,11 @@ namespace Raft
 
         public void FlushSleCache()
         {
-            if (!rn.entitySettings.DelayedPersistenceIsActive)
+            if (!statemachine.entitySettings.DelayedPersistenceIsActive)
                 return;
             if (sleCache.Count > 0 || sleCacheIndex > 0 || sleCacheTerm > 0 || sleCacheBusinessLogicIndex > 0)
             {
-                rn.VerbosePrint($"{rn.NodeAddress.NodeAddressId}> flushing: {sleCache.Count}");
+                statemachine.VerbosePrint($"{statemachine.NodeAddress.NodeAddressId}> flushing: {sleCache.Count}");
 
                 using (var t = this.db.GetTransaction())
                 {
@@ -347,7 +342,7 @@ namespace Raft
         {
             LastBusinessLogicCommittedIndex = index;
 
-            if (rn.entitySettings.DelayedPersistenceIsActive)
+            if (statemachine.entitySettings.DelayedPersistenceIsActive)
             {
                 sleCacheBusinessLogicIndex = index;
             }
@@ -373,7 +368,7 @@ namespace Raft
         {
             StateLogEntrySuggestion le = new StateLogEntrySuggestion()
             {
-                LeaderTerm = rn.NodeTerm
+                LeaderTerm = statemachine.NodeTerm
             };
 
             int cnt = 0;
@@ -386,7 +381,7 @@ namespace Raft
 
                 if (req.StateLogEntryId == 0)// && req.StateLogEntryTerm == 0)
                 {
-                    if (rn.entitySettings.DelayedPersistenceIsActive && sleCache.Count > 0)
+                    if (statemachine.entitySettings.DelayedPersistenceIsActive && sleCache.Count > 0)
                     {
                         sle = sleCache.OrderBy(r => r.Key).First().Value.Item2;
                     }
@@ -419,7 +414,7 @@ namespace Raft
                     Tuple<ulong, StateLogEntry> sleTpl;
                     bool reForward = true;
 
-                    if (rn.entitySettings.DelayedPersistenceIsActive &&
+                    if (statemachine.entitySettings.DelayedPersistenceIsActive &&
                         sleCache.TryGetValue(req.StateLogEntryId, out sleTpl)
                         )
                     {
@@ -592,7 +587,7 @@ namespace Raft
                     t.Commit();
                 }
 
-                rn.VerbosePrint($"{rn.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
+                statemachine.VerbosePrint($"{statemachine.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
                     $" { (GetEntryByIndexTerm(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term) != null)};");
 
                 //Setting new internal LogId
@@ -626,7 +621,7 @@ namespace Raft
                         this.LastCommittedIndexTerm = suggestion.StateLogEntry.Term;
 
                         //this.rn.Commited(suggestion.StateLogEntry.Index);                      
-                        this.rn.Commited();
+                        this.statemachine.Commited();
                     }
                 }
             }
@@ -634,9 +629,9 @@ namespace Raft
             {
 
             }
-            if (rn.LeaderHeartbeat != null && this.LastCommittedIndex < rn.LeaderHeartbeat.LastStateLogCommittedIndex)
+            if (statemachine.LeaderHeartbeat != null && this.LastCommittedIndex < statemachine.LeaderHeartbeat.LastStateLogCommittedIndex)
             {
-                rn.SyncronizeWithLeader(true);
+                statemachine.SyncronizeWithLeader(true);
             }
             else
                 LeaderSynchronizationIsActive = false;
@@ -702,7 +697,7 @@ namespace Raft
                 }
                 dStateLogEntryAcceptance.Remove(applied.StateLogEntryId);
 
-                if (this.LastCommittedIndex < applied.StateLogEntryId && rn.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
+                if (this.LastCommittedIndex < applied.StateLogEntryId && statemachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
                 {
                     //Saving committed entry (all previous are automatically committed)
                     List<byte[]> lstCommited = new List<byte[]>();
@@ -726,7 +721,7 @@ namespace Raft
                     this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
 
                     if (lstCommited.Count > 0)
-                        this.rn.Commited();
+                        this.statemachine.Commited();
                     return eEntryAcceptanceResult.Committed;
                 }
             }
@@ -754,7 +749,7 @@ namespace Raft
 
         public void Debug_PrintOutInMemory()
         {
-            if (rn.entitySettings.InMemoryEntity)
+            if (statemachine.entitySettings.InMemoryEntity)
             {
                 lock (inMem.Sync)
                 {

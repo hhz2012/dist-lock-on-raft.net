@@ -108,12 +108,11 @@ namespace LockService
         }
         public void TestWorkOperation(LockOper command)
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
                 //data = "test";
-                lock (sync_nodes)
-                {
+               
                     if (Nodes.Count < 1)
                         return;
                     var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
@@ -122,8 +121,9 @@ namespace LockService
                     if (leader == null)
                         return;
                     Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                    ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
-                }
+                    var result=await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
+                Console.WriteLine("await finished");
+               
             });
         }
     }

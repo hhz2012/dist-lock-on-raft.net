@@ -67,20 +67,10 @@ namespace Raft
         /// <returns></returns>
         async public Task WaitOneAsync(int timeouts)
         {
+          await WaitHandleAsyncFactory.FromWaitHandle(mre, TimeSpan.FromMilliseconds(timeouts));
+       }
 
-            //await resp.amre.WaitAsync();
-            await WaitHandleAsyncFactory.FromWaitHandle(mre, TimeSpan.FromMilliseconds(timeouts));
-            //await mre.AsTask(TimeSpan.FromMilliseconds(timeouts));
-        }
-
-        //async public Task<bool> WaitOneAsync()
-        //{
-        //    //if (Interlocked.Read(ref IsDisposed) == 1 || amre == null)
-        //    //    return false;
-
-        //    return await amre.WaitAsync();
-
-        //}
+ 
 
 
         long IsDisposed = 0;
