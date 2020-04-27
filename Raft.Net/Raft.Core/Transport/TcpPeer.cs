@@ -13,6 +13,8 @@ using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Newtonsoft.Json;
+using Raft.Core;
+using Raft.Core.Transport;
 
 namespace Raft.Transport
 {
@@ -82,7 +84,7 @@ namespace Raft.Transport
                                  pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
                                  pipeline.AddLast(new StringEncoder(), new StringDecoder());
 
-                                pipeline.AddLast("echo", new EchoClientHandler(this));
+                                pipeline.AddLast("echo", new PeerMessageHandler(this));
                              }));
              
             IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
@@ -244,40 +246,6 @@ namespace Raft.Transport
         }
     }//eoc
 
-    public class EchoClientHandler : ChannelHandlerAdapter
-    {
-        readonly IByteBuffer initialMessage;
-        TcpPeer peer = null;
-        public EchoClientHandler(TcpPeer peer)
-        {
-            this.peer = peer;
-           // this.initialMessage = Unpooled.Buffer(1000);
-          //  byte[] messageBytes = Encoding.UTF8.GetBytes("Hello world");
-           // this.initialMessage.WriteBytes(messageBytes);
-        }
+  
 
-
-        public override void ChannelActive(IChannelHandlerContext context) => context.WriteAndFlushAsync(this.initialMessage);
-
-        public override void ChannelRead(IChannelHandlerContext context, object message)
-        {
-            
-//               Console.WriteLine("Received from server: " + message);
-            this.peer.OnRecieve(context, message as string).ConfigureAwait(false).GetAwaiter().GetResult();
-            
-        }
-
-        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
-
-        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
-        {
-            Console.WriteLine("Exception: " + exception);
-            context.CloseAsync();
-        }
-    }
-    public class RaftCommand
-    {
-        public int Code { get; set; }
-        public object Message { get; set; }
-    }
 }//eon
