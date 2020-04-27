@@ -22,7 +22,7 @@ namespace Raft
             PreviousStateLogTerm = 0;
 
         }
-
+        public int Id { get; set; }
         /// <summary>
         /// 
         /// </summary>        

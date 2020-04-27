@@ -221,7 +221,15 @@ namespace Raft
             StateLogId = suggest.StateLogEntry.Index;
             StateLogTerm = suggest.StateLogEntry.Term;
 
-            this.db.GetCollection<StateLogEntry>(this.stateTableName).Insert(suggest.StateLogEntry);
+            try
+            {
+               
+                this.db.GetCollection<StateLogEntry>(this.stateTableName).Insert(suggest.StateLogEntry);
+            }
+            catch (Exception ex)
+            {
+
+            }
             //using (var t = this.db.GetTransaction())
             //{
             //    t.Insert<byte[], byte[]>(stateTableName, new byte[] { 1 }.ToBytes(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term), suggest.StateLogEntry.SerializeBiser());
@@ -248,7 +256,7 @@ namespace Raft
                 var row = col
                     .Query()
                     .Where(x => x.Index == lhb.LastStateLogCommittedIndex && x.Term == lhb.LastStateLogCommittedIndexTerm)
-                    .First();
+                    .FirstOrDefault();
                 //var row = t.Select<byte[], byte[]>(stateTableName, (new byte[] { 1 }).ToBytes(lhb.LastStateLogCommittedIndex, lhb.LastStateLogCommittedIndexTerm));
                     if (row!=null&&row.IsCommitted==false)
                     {
@@ -256,7 +264,7 @@ namespace Raft
                         this.LastCommittedIndex = lhb.LastStateLogCommittedIndex;
                         this.LastCommittedIndexTerm = lhb.LastStateLogCommittedIndexTerm;
                         row.IsCommitted = true;
-                         col.Update(row);
+                        col.Update(row);
                     //t.Insert<byte[], byte[]>(stateTableName, new byte[] { 2 }, lhb.LastStateLogCommittedIndex.ToBytes(lhb.LastStateLogCommittedIndexTerm));
                     //t.Commit();
                 }
@@ -380,7 +388,7 @@ namespace Raft
             var col = this.db.GetCollection<StateLogEntry>(stateTableName);
             //using (var t = this.db.GetTransaction())
             {
-                var trow = col.Query().Where(s => s.IsCommitted == true).OrderBy(s => s.Index, 0).First();
+                var trow = col.Query().Where(s => s.IsCommitted == true).OrderBy(s => s.Index, 0).FirstOrDefault();
                 le.StateLogEntry = trow;
                 //if (req.StateLogEntryId == 0)// && req.StateLogEntryTerm == 0)
                 //{
@@ -480,7 +488,7 @@ namespace Raft
             {
                 Tuple<ulong, StateLogEntry> sleTpl;
                 var col = this.db.GetCollection<StateLogEntry>(stateTableName);
-                return col.Query().Where(s => s.Index == logEntryId && s.Term == logEntryTerm).First();
+                return col.Query().Where(s => s.Index == logEntryId && s.Term == logEntryTerm).FirstOrDefault();
                 //using (var t = this.db.GetTransaction())
                 //{
                 //    var row = t.Select<byte[], byte[]>(stateTableName, new byte[] { 1 }.ToBytes(logEntryId, logEntryTerm));
@@ -510,7 +518,7 @@ namespace Raft
                 if (this.LastCommittedIndex < logEntryId)
                     return null;
                 var col = this.db.GetCollection<StateLogEntry>(stateTableName);
-                var item = col.Query().Where(s => s.Index == logEntryId).OrderBy(s => s.Term, 0).First();
+                var item = col.Query().Where(s => s.Index == logEntryId).OrderBy(s => s.Term, 0).FirstOrDefault();
                 return item;
 
                 //using (var t = this.db.GetTransaction())
@@ -540,8 +548,10 @@ namespace Raft
         {
             try
             {
-            //using (var t = this.db.GetTransaction())
-            {
+                var col = this.db.GetCollection<StateLogEntry>(stateTableName);
+                col.Insert(suggestion.StateLogEntry);
+                //using (var t = this.db.GetTransaction())
+                {
                 //foreach (var el in t.SelectForwardFromTo<byte[], byte[]>(stateTableName,
                 //            new byte[] { 1 }.ToBytes(suggestion.StateLogEntry.Index, ulong.MinValue), true,
                 //            new byte[] { 1 }.ToBytes(ulong.MaxValue, ulong.MaxValue), true, true))
@@ -668,7 +678,7 @@ namespace Raft
                     List<byte[]> lstCommited = new List<byte[]>();
 
                     var col = this.db.GetCollection<StateLogEntry>(stateTableName);
-                    var list = col.Query().Where(s => s.Index > this.LastAppliedIndex + 1 && s.Term == applied.StateLogEntryTerm).ToList();
+                    var list = col.Query().Where(s => s.Index >= this.LastCommittedIndex + 1 && s.Term == applied.StateLogEntryTerm).ToList();
                     foreach (var item in list)
                     {
                         lstCommited.Add(new byte[1]);

@@ -42,17 +42,17 @@ namespace NodeTest.Core
                           new EndPoint()
                           {
                                ipAddress="127.0.0.1",
-                               port=11001
+                               port=12001
                           },
                            new EndPoint()
                           {
                                ipAddress="127.0.0.1",
-                               port=11002
+                               port=12002
                           },
                             new EndPoint()
                           {
                                ipAddress="127.0.0.1",
-                               port=11003
+                               port=12003
                           }
                      }
                 }
