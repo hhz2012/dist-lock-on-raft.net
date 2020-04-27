@@ -45,52 +45,7 @@ namespace Raft
         public ulong LastStateLogCommittedIndexTerm { get; set; }
 
 
-        //#region "Biser"
-        //public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
-        //{
-        //    Biser.Encoder enc = new Biser.Encoder(existingEncoder);
-
-        //    enc
-        //    .Add(LeaderTerm)
-        //    .Add(StateLogLatestTerm)
-        //    .Add(StateLogLatestIndex)
-        //    .Add(LastStateLogCommittedIndex)
-        //    .Add(LastStateLogCommittedIndexTerm)
-        //    ;
-        //    return enc;
-        //}
-
-        //public static LeaderHeartbeat BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
-        //{
-        //    Biser.Decoder decoder = null;
-        //    if (extDecoder == null)
-        //    {
-        //        if (enc == null || enc.Length == 0)
-        //            return null;
-        //        decoder = new Biser.Decoder(enc);
-        //        if (decoder.CheckNull())
-        //            return null;
-        //    }
-        //    else
-        //    {
-        //        if (extDecoder.CheckNull())
-        //            return null;
-        //        else
-        //            decoder = extDecoder;
-        //    }
-
-        //    LeaderHeartbeat m = new LeaderHeartbeat();  //!!!!!!!!!!!!!! change return type
-
-        //    m.LeaderTerm = decoder.GetULong();
-        //    m.StateLogLatestTerm = decoder.GetULong();
-        //    m.StateLogLatestIndex = decoder.GetULong();
-        //    m.LastStateLogCommittedIndex = decoder.GetULong();
-        //    m.LastStateLogCommittedIndexTerm = decoder.GetULong();
-            
-
-        //    return m;
-        //}
-        //#endregion
+       
 
     }
 }
