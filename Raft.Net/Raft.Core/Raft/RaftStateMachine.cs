@@ -975,7 +975,7 @@ namespace Raft
 
             var res = this.NodeStateLog.EntryIsAccepted(address, GetMajorityQuantity(), applied);
 
-            if (res == StateLog.eEntryAcceptanceResult.Committed)
+            if (res == eEntryAcceptanceResult.Committed)
             {
                 this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})");
                 RemoveLeaderLogResendTimer();

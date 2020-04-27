@@ -3,6 +3,8 @@
   It's a free software for those, who think that it should be free.
 */
 using System;
+using System.Collections.Generic;
+using static Raft.Core.StateMachine.MemStateLog;
 
 namespace Raft
 {
@@ -36,11 +38,41 @@ namespace Raft
         void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
         void Dispose();
-        StateLog.eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
+        eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
         void FlushSleCache();
         StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
         StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
         StateLogEntrySuggestion GetNextStateLogEntrySuggestionFromRequested(StateLogEntryRequest req);
         bool SetLastCommittedIndexFromLeader(LeaderHeartbeat lhb);
+    }
+    public enum eEntryAcceptanceResult
+    {
+        NotAccepted,
+        Committed,
+        AlreadyAccepted,
+        Accepted
+    }
+    class StateLogEntryAcceptance
+    {
+        public StateLogEntryAcceptance()
+        {
+            //Quantity = 0;
+        }
+
+        ///// <summary>
+        ///// Accepted Quantity
+        ///// </summary>
+        //public uint Quantity { get; set; }
+        /// <summary>
+        /// StateLogEntry Index
+        /// </summary>
+        public ulong Index { get; set; }
+        /// <summary>
+        /// StateLogEntry Term
+        /// </summary>
+        public ulong Term { get; set; }
+
+        public HashSet<string> acceptedEndPoints = new HashSet<string>();
+
     }
 }

@@ -16,23 +16,7 @@ namespace Raft
 
     public class StateLog : IDisposable, IStateLog
     {
-        class StateLogEntryAcceptance
-        {
-            public StateLogEntryAcceptance()
-            {
-                //Quantity = 0;
-            }
-
-            /// </summary>
-            public ulong Index { get; set; }
-            /// <summary>
-            /// StateLogEntry Term
-            /// </summary>
-            public ulong Term { get; set; }
-
-            public HashSet<string> acceptedEndPoints = new HashSet<string>();
-
-        }
+       
 
         /// <summary>
         /// Main table that stores logs
@@ -665,13 +649,7 @@ namespace Raft
                 el.Value.acceptedEndPoints.Remove(endpointsid);
         }
 
-        public enum eEntryAcceptanceResult
-        {
-            NotAccepted,
-            Committed,
-            AlreadyAccepted,
-            Accepted
-        }
+      
         /// <summary>
         /// +
         /// Only Leader's proc.
