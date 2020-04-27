@@ -397,7 +397,6 @@ namespace Raft
                     if (sle != null)
                     {
                         le.StateLogEntry = sle;
-
                         if (
                             LastCommittedIndexTerm >= le.StateLogEntry.Term
                             &&
@@ -749,21 +748,7 @@ namespace Raft
 
         public void Debug_PrintOutInMemory()
         {
-            if (statemachine.entitySettings.InMemoryEntity)
-            {
-                lock (inMem.Sync)
-                {
-                    foreach (var el in inMem.SelectForwardFromTo(ulong.MinValue, ulong.MinValue, true, ulong.MaxValue, ulong.MaxValue))
-                    {
-                        Console.WriteLine($"I: {el.Item1}; T: {el.Item2}; S: {el.Item3.IsCommitted}");
-                    }
-
-                }
-            }
-            else
-            {
-                Console.WriteLine("Debug_PrintOutInMemory failed - not InMemory entity");
-            }
+          Console.WriteLine("Debug_PrintOutInMemory failed - not InMemory entity");
         }
 
     }
