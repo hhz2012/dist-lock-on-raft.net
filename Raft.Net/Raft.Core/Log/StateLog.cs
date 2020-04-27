@@ -717,6 +717,11 @@ namespace Raft
             {
                 this.LastAppliedIndex = applied.StateLogEntryId;
                 //Removing from Dictionary
+                var entry = this.GetEntryByIndexTerm(applied.StateLogEntryId,applied.StateLogEntryTerm);
+                if (entry.ExternalID!=null)
+                {
+                    Console.Write("entry accepted " + entry.ExternalID + " time " + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+                }
                 dStateLogEntryAcceptance.Remove(applied.StateLogEntryId);
 
                 if (this.LastCommittedIndex < applied.StateLogEntryId && rn.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId

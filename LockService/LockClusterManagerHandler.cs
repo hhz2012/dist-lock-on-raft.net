@@ -24,7 +24,7 @@ namespace Raft.Core.RaftEmulator
                 string str = System.Text.Encoding.Default.GetString(data);
                 string json = str;
                 ClusterCommand command = Newtonsoft.Json.JsonConvert.DeserializeObject<ClusterCommand>(json);
-                Console.WriteLine($"command received:{command.Command},{command.Target}");
+                //Console.WriteLine($"command received:{command.Command},{command.Target}");
                 if (command.Command== "CreateShard")
                 {
                     this.node.JoinShard(command);

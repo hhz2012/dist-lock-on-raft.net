@@ -33,8 +33,8 @@ namespace LockService
             }
             re_settings = new RaftEntitySettings()
             {
-                VerboseRaft = true,
-                VerboseTransport = true,
+               // VerboseRaft = true,
+               // VerboseTransport = true,
                 DelayedPersistenceIsActive = true,
             };
             List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
@@ -121,7 +121,7 @@ namespace LockService
 
                     if (leader == null)
                         return;
-
+                    Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                     ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });

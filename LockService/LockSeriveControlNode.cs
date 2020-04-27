@@ -71,8 +71,8 @@ namespace LockService
             }
             re_settings = new RaftEntitySettings()
             {
-                VerboseRaft = true,
-                VerboseTransport = true,
+           //     VerboseRaft = true,
+           //     VerboseTransport = true,
                 DelayedPersistenceIsActive = true,
             };
             List<LockSeriveControlNode> nodes = new List<LockSeriveControlNode>();
