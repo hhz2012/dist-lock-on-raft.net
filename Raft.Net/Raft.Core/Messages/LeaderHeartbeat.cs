@@ -44,8 +44,5 @@ namespace Raft
         /// </summary>        
         public ulong LastStateLogCommittedIndexTerm { get; set; }
 
-
-       
-
     }
 }

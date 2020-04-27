@@ -1068,6 +1068,9 @@ namespace Raft
             }
         }
         int inCommit = 0;
+        /// <summary>
+        /// callback function to handle action ,event response
+        /// </summary>
         internal void Commited()
         {           
             if (System.Threading.Interlocked.CompareExchange(ref inCommit, 1, 0) != 0)
