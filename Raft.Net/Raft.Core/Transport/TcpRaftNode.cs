@@ -131,9 +131,6 @@ namespace Raft.Transport
         }
         public void Start()
         {
-            //new Thread(new ThreadStart(StartTcpListener)).Start();
-            //Task.Delay(1000);
-
             this.StartTcpListener();
         }
         public async Task StartConnect()
