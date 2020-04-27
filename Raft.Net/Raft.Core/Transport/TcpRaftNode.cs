@@ -40,7 +40,6 @@ namespace Raft.Transport
                 return this.nodeName;
             }
         }
-
         public TcpRaftNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
@@ -77,11 +76,8 @@ namespace Raft.Transport
 
             if(this.NodeSettings.RaftEntitiesSettings.Where(r=>r.EntityName.ToLower() == "default").Count()<1)
                 this.NodeSettings.RaftEntitiesSettings.Add(new RaftEntitySettings());
-
-
             foreach (var re_settings in this.NodeSettings.RaftEntitiesSettings)
             {
-
                 if (String.IsNullOrEmpty(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
@@ -113,7 +109,6 @@ namespace Raft.Transport
             {
                 return rn.IsLeader;
             }
-
             return false;
         }
        
@@ -143,31 +138,7 @@ namespace Raft.Transport
         {
             DoTcpServer();
         }
-        //public async void DoTcpServer()
-        //{ 
-        //    try
-        //    {
-        //        if(server == null)
-        //            server = new TcpListener(IPAddress.Any, this.port); 
-
-        //        server.Start();
-
-        //        log.Log(new WarningLogEntry() { LogType = WarningLogEntry.eLogType.DEBUG,
-        //            Description = $"Started TcpNode on port {server.LocalEndpoint.ToString()}"
-        //        });
-
-        //        while (true)
-        //        {
-        //            var peer = await server.AcceptTcpClientAsync();//.ConfigureAwait(false);
-        //            spider.AddTcpClient(peer);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        if (log != null)
-        //            log.Log(new WarningLogEntry() { Exception = ex });
-        //    }
-        //}
+        
         public async void DoTcpServer()
         {
             try
@@ -197,11 +168,6 @@ namespace Raft.Transport
 
                 // bootstrap绑定到指定端口的行为 就是服务端启动服务，同样的Serverbootstrap可以bind到多个端口
                 IChannel boundChannel = await bootstrap.BindAsync(this.port);
-                //while (true)
-                //{
-                //    var peer = await server.AcceptTcpClientAsync();//.ConfigureAwait(false);
-                //    spider.AddTcpClient(peer);
-                //}
             }
             catch (Exception ex)
             {
@@ -241,32 +207,21 @@ namespace Raft.Transport
                 var msgIdStr = msgId.ToBytesString();
                 var resp = new ResponseCrate();
                 resp.TimeoutsMs = timeoutMs; //enable for amre
-                                             //resp.TimeoutsMs = Int32.MaxValue; //using timeout of the wait handle (not the timer), enable for mre
-
-                //resp.Init_MRE();
                 resp.Init_AMRE();
-
                 AsyncResponseHandler.df[msgIdStr] = resp;
-
                 var aler = rn.AddLogEntry(data,msgId);
-
                 switch(aler.AddResult)
                 {
-                 
                     case AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED:
                     case AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER:
-
                         //async waiting
                         await resp.amre.WaitAsync();    //enable for amre
-
                         resp.Dispose_MRE();
-
                         if (AsyncResponseHandler.df.TryRemove(msgIdStr, out resp))
                         {
                             if (resp.IsRespOk)
                                 return true;
                         }
-
                         break;
                     default:
                         resp.Dispose_MRE();
@@ -282,7 +237,6 @@ namespace Raft.Transport
         {
             get { return System.Threading.Interlocked.Read(ref disposed) == 1; }
         }
-
         public void Dispose()
         {
             if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
@@ -336,8 +290,6 @@ namespace Raft.Transport
             if (this.raftNodes.TryGetValue(entityName, out rn))
                 rn.Debug_PrintOutInMemory();
         }
-
-
     }//eo class
 
     public class EchoServerHandler : ChannelHandlerAdapter //管道处理基类，较常用
@@ -360,12 +312,7 @@ namespace Raft.Transport
             {
                 peer.OnRecieve(context, str).ConfigureAwait(false).GetAwaiter().GetResult();
             }
-           
-            //if (buffer != null)
-            //{
-            //    Console.WriteLine("Received from client: " + buffer.ToString(Encoding.UTF8));
-            //}
-            //context.WriteAsync(message);//写入输出流
+
         }
 
         // 输出到客户端，也可以在上面的方法中直接调用WriteAndFlushAsync方法直接输出

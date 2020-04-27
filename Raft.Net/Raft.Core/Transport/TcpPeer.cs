@@ -4,13 +4,9 @@
 */
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
-
-using DBreeze.Utils;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Transport.Bootstrapping;
@@ -22,8 +18,6 @@ namespace Raft.Transport
 {
     public class TcpPeer : IDisposable
     {
-        TcpClient _client;
-        NetworkStream stream = null;
         IChannelHandlerContext _nettyclient;
         IChannel clientChannel = null;
         //cSprot1Parser _sprot1 = null;
@@ -36,27 +30,10 @@ namespace Raft.Transport
         {
             _nettyclient = client;
             trn = rn;
-            try
-            {
-              //  SetupSprot();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("can't connect to peer");
-                return;
-            }
-
             trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) =>
             {
-                //don't know why
-                //if (Handshake == null)
-                //this.Dispose();
-
             }, null, true);
-
-           // Task.Run(async () => await Read());
         }
-
         /// <summary>
         /// Combination of remote (outgoing) ip and its local listening port
         /// </summary>
@@ -85,7 +62,7 @@ namespace Raft.Transport
         public TcpPeer(string hostname, int port, TcpRaftNode rn)
         {
             trn = rn;
-            //Task.Run(async () => await Connect(hostname, port));
+           
         }
 
         public  async Task Connect(string hostname, int port)
@@ -111,18 +88,6 @@ namespace Raft.Transport
             IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
             this.clientChannel = clientChannel;
         }
-
-        //void SetupSprot()
-        //{
-        //    _sprot1 = new cSprot1Parser();
-        //    _sprot1.UseBigEndian = true;
-        //    _sprot1.DestroySelf = this.Dispose;
-        //   // _sprot1.packetParser = this.packetParser;
-        //    //_sprot1.MessageQueue = _tcpServerClient.__IncomingDataBuffer;
-        //    _sprot1.MaxPayLoad = 50000000; //this will be an approximate limitation for one command
-        //    _sprot1.DeviceShouldSendAuthorisationBytesBeforeProceedCodec = false;
-        //    _sprot1.ToSendToParserAuthenticationBytes = false;
-        //}
 
         internal void FillNodeAddress()
         {
@@ -184,15 +149,6 @@ namespace Raft.Transport
                         }
                         return;
                     case 5: //Ping
-
-                        //if (na != null)
-                        //{
-                        //    trn.log.Log(new WarningLogEntry()
-                        //    {
-                        //        LogType = WarningLogEntry.eLogType.DEBUG,
-                        //        Description = $"{trn.port} ({trn.rn.NodeState})> peer {na.NodeAddressId} sent ping"
-                        //    });
-                        //}
                         return;
                 }
             }
@@ -200,39 +156,8 @@ namespace Raft.Transport
             {
                 Dispose();
             }
-
-
         }
-
-
-        object lock_writer = new object();
-        bool inWrite = false;
-        Queue<byte[]> writerQueue = new Queue<byte[]>();
-        Queue<byte[]> highPriorityQueue = new Queue<byte[]>();
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="codec"></param>
-        /// <param name="data"></param>
-        /// <param name="highPriority"></param>
-        public void Write(byte[] sprot, bool highPriority = false)
-        {
-            lock (lock_writer)
-            {
-                if (highPriority)
-                    highPriorityQueue.Enqueue(sprot);
-                else
-                    writerQueue.Enqueue(sprot);
-
-                if (inWrite)
-                    return;
-
-                inWrite = true;
-            }
-
-            Task.Run(async () => { await Writer(); });
-        }
+        
         public void Send(int Command,object msg)
         {
             RaftCommand cmd = new RaftCommand()
@@ -261,79 +186,6 @@ namespace Raft.Transport
             }
         }
 
-        /// <summary>
-        /// highPriorityQueue is served first
-        /// </summary>
-        /// <returns></returns>
-        async Task Writer()
-        {
-            if (this.Disposed)
-                return;
-
-            byte[] sprot = null;
-            try
-            {
-                while (true)
-                {
-                    lock (lock_writer)
-                    {
-                        if (highPriorityQueue.Count == 0 && writerQueue.Count == 0)
-                        {
-                            inWrite = false;
-                            return;
-                        }
-
-                        if (highPriorityQueue.Count > 0)
-                            sprot = highPriorityQueue.Dequeue();
-                        else
-                            sprot = writerQueue.Dequeue();
-                    }
-
-                    //huge sprot should be splitted, packed into new sprot codec by chunks and supplied here as a standard chunk
-                    if (stream != null)
-                    {
-                        await stream.WriteAsync(sprot, 0, sprot.Length);//.ConfigureAwait(false);
-                        await stream.FlushAsync();//.ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await this._nettyclient.WriteAndFlushAsync(sprot);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Dispose();
-            }
-        }
-
-
-        //async Task Read()
-        //{
-        //    try
-        //    {
-        //        //Example of pure tcp
-        //        byte[] rbf = new byte[10000];
-        //        int a = 0;
-        //        if (stream == null)
-        //        {
-        //            Console.WriteLine("stream null");
-        //        }
-        //        while ((a = await stream.ReadAsync(rbf, 0, rbf.Length)) > 0)
-        //        {
-        //            _sprot1.MessageQueue.Enqueue(rbf.Substring(0, a));
-        //            _sprot1.PacketAnalizator(false);
-        //        }
-
-        //    }
-        //    catch (System.Exception ex)
-        //    {
-        //        //Fires when remote client drops connection //Null reference  
-        //        Console.WriteLine(" error in tcp peer:" + ex.Message);
-        //        Dispose();
-        //    }
-
-        //}
         public async Task OnRecieve(IChannelHandlerContext context, string msgstr)
         {
             //
@@ -382,52 +234,14 @@ namespace Raft.Transport
             }
             catch (Exception ex)
             {
-
             }
-
-            try
-            {
-                if (stream != null)
-                {
-                    stream.Dispose();
-                    stream = null;
-                }
-            }
-            catch (Exception)
-            { }
-            try
-            {
-                if (_client != null)
-                {
-                    Console.WriteLine("client dispose");
-                    (_client as IDisposable).Dispose();
-                    _client = null;
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-            //try
-            //{
-            //    if (_sprot1 != null)
-            //    {
-            //        _sprot1.MessageQueue.Clear();
-            //        _sprot1 = null;
-            //    }
-            //}
-            //catch (Exception)
-            //{ }
-
+           
             if (!DontRemoveFromSpider && endpoint != null)
                 trn.spider.RemovePeerFromClusterEndPoints(endpoint);
             //-------------  Last line
             if (!calledFromDispose)
                 Dispose();
         }
-
-
     }//eoc
 
     public class EchoClientHandler : ChannelHandlerAdapter
