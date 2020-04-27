@@ -99,7 +99,6 @@ namespace Raft.Transport
             _sync.EnterWriteLock();
             try
             {
-
                 //Choosing priority connection
                 if (!Peers.ContainsKey(peer.EndPointSID))
                 {                 
@@ -148,12 +147,10 @@ namespace Raft.Transport
             {
                 try
                 {
-                    //TcpClient cl = new TcpClient();
                     if (this.IsMe(el))
                     {
                         continue;
                     }
-                   // await cl.ConnectAsync(el.Host, el.Port);
                     el.Peer = new TcpPeer(el.Host, el.Port,this.trn);
                     await el.Peer.Connect(el.Host, el.Port);
                     el.Peer.Send(RaftCommand.Handshake, new TcpMsgHandshake()
