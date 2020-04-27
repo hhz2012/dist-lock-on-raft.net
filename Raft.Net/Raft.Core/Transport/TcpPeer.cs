@@ -101,7 +101,7 @@ namespace Raft.Transport
                     case RaftCommand.Handshake: //Handshake
 
                         Handshake = message.Message as TcpMsgHandshake;
-                        trn.spider.AddPeerToClusterEndPoints(this, true);
+                        trn.peerNetwork.AddPeerToClusterEndPoints(this, true);
                         return;
                     case RaftCommand.RaftMessage: //RaftMessage
 
@@ -130,7 +130,7 @@ namespace Raft.Transport
                         return;
                     case RaftCommand.HandshakeACK: //Handshake ACK
                         Handshake = message.Message as TcpMsgHandshake;
-                        trn.spider.AddPeerToClusterEndPoints(this, false);
+                        trn.peerNetwork.AddPeerToClusterEndPoints(this, false);
                         return;
                     case RaftCommand.FreeMessage: //Free Message protocol
                         var Tcpmsg = message.Message as TcpMsg;
@@ -232,7 +232,7 @@ namespace Raft.Transport
             }
            
             if (!DontRemoveFromSpider && endpoint != null)
-                trn.spider.RemovePeerFromClusterEndPoints(endpoint);
+                trn.peerNetwork.RemovePeerFromClusterEndPoints(endpoint);
             //-------------  Last line
             if (!calledFromDispose)
                 Dispose();

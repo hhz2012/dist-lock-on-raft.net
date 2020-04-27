@@ -19,7 +19,7 @@ namespace Raft.Transport
         internal IWarningLog log = null;
         internal int port = 0;
         internal Dictionary<string, RaftStateMachine> raftNodes = new Dictionary<string, RaftStateMachine>();
-        internal TcpPeerNetwork spider = null;
+        internal TcpPeerNetwork peerNetwork = null;
         internal DBreezeEngine dbEngine;
         internal NodeSettings NodeSettings = null;
         internal string nodeName;
@@ -46,7 +46,7 @@ namespace Raft.Transport
             conf.Storage = DBreezeConfiguration.eStorage.DISK;
             conf.AlternativeTablesLocations.Add("mem_*", String.Empty);
             dbEngine = new DBreezeEngine(conf);
-            spider = new TcpPeerNetwork(this);
+            peerNetwork = new TcpPeerNetwork(this);
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
             {
@@ -63,7 +63,7 @@ namespace Raft.Transport
                 if (this.raftNodes.ContainsKey(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
-                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.spider, this.log, handler);
+                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), this.dbEngine, this.peerNetwork, this.log, handler);
              
                 rn.Verbose = re_settings.VerboseRaft;       
                 rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
@@ -91,7 +91,7 @@ namespace Raft.Transport
         }
         public void Start()
         {
-            this.spider.Start();
+            this.peerNetwork.Start();
         }
         internal void PeerIsDisconnected(string endpointsid)
         {
@@ -106,7 +106,7 @@ namespace Raft.Transport
         }
         public async Task StartConnect()
         {
-            await spider.Handshake();
+            await peerNetwork.Handshake();
         }
         public bool NodeIsInLatestState(string entityName = "default")
         {
@@ -184,9 +184,9 @@ namespace Raft.Transport
             }
             try
             {
-                if (spider != null)
+                if (peerNetwork != null)
                 {
-                    spider.Dispose();
+                    peerNetwork.Dispose();
                 }
             }
             catch (Exception ex)

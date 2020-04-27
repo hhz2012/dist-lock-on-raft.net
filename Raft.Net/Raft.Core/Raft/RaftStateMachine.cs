@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using DBreeze;
 using DBreeze.Utils;
 using Raft.Core.Handler;
+using Raft.Core.Raft;
 using Raft.Core.StateMachine;
 
 namespace Raft
@@ -19,20 +20,6 @@ namespace Raft
     /// </summary>
     public class RaftStateMachine :IRaftStateMachine, IDisposable 
     {
-        public enum eNodeState
-        {
-            Leader,
-            Follower,
-            Candidate
-        }
-
-        enum eTermComparationResult
-        {
-            CurrentTermIsSmaller,
-            TermsAreEqual,
-            CurrentTermIsHigher
-        }
-
         /// <summary>
         /// Last term this node has voted
         /// </summary>
@@ -61,7 +48,6 @@ namespace Raft
         /// <summary>
         /// 
         /// </summary>
-        ulong Delayedpersistence_TimerId = 0;
         ulong NoLeaderAddCommand_TimerId = 0;
         /// <summary>
         /// 
@@ -73,7 +59,6 @@ namespace Raft
         ulong LeaderLogResend_TimerId = 0;
 
         Random rnd = new Random();
-        //uint VotesQuantity = 0;   //After becoming a candidate
         HashSet<string> VotesQuantity = new HashSet<string>();
 
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
@@ -111,18 +96,12 @@ namespace Raft
         /// Latest heartbeat from leader, can be null on start
         /// </summary>
         internal LeaderHeartbeat LeaderHeartbeat = null;
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        //internal RedirectHandler redirector = null;
-
         /// <summary>
         /// Supplied via constructor. Will be called and supply
         /// </summary>
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
         IActionHandler handler;
         public string NodeName { get; set; }
-
         /// <summary>
         /// 
         /// </summary>
@@ -133,24 +112,19 @@ namespace Raft
         /// <param name="OnCommit"></param>
         public RaftStateMachine(RaftEntitySettings settings, DBreezeEngine dbEngine, IPeerConnector raftSender, IWarningLog log, IActionHandler handler)
         {
-
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
             this.handler = handler;
             this.handler.SetNode(this);
             Sender = raftSender;
             entitySettings = settings;           
-
             //Starting time master
             this.TM = new TimeMaster(log);
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, dbEngine);
-
             //Adding AddLogEntryAsync cleanup
             this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);
         }
-
         int disposed = 0;
-
         /// <summary>
         /// 
         /// </summary>
@@ -158,9 +132,7 @@ namespace Raft
         {
             if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
                 return;
-
             this.NodeStop();
-
             if (this.TM != null)
                 this.TM.Dispose();
 
@@ -178,8 +150,6 @@ namespace Raft
                 return this.NodeState == eNodeState.Leader;
             }
         }
-
-
     /// <summary>
     /// We need this value to calculate majority while leader election
     /// </summary>
@@ -271,23 +241,6 @@ namespace Raft
             }
             
         }
-
-        /// <summary>
-        /// Returns Leader node address
-        /// </summary>
-        public NodeRaftAddress LeaderNode
-        {
-            get {
-                NodeRaftAddress na = null;
-                lock (lock_Operations)
-                {
-                    if (Election_TimerId == 0)
-                        na = LeaderNodeAddress;                    
-                }
-                return na;
-            }
-        }
-
         /// <summary>
         /// Time to become a candidate
         /// </summary>
@@ -325,7 +278,6 @@ namespace Raft
                     //Setting up new Election Timer
                     RunElectionTimer();
                 }
-
                 this.Sender.SendToAll(eRaftSignalType.CandidateRequest, req, this.NodeAddress, entitySettings.EntityName);
             }
             catch (Exception ex)
@@ -333,7 +285,6 @@ namespace Raft
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.ElectionTimeout" });
             }
         }
-
 
         void LeaderTimerElapse(object userToken)
         {
@@ -395,7 +346,6 @@ namespace Raft
                         case eRaftSignalType.StateLogRedirectRequest: //Not a leader node tries to add command
                             ParseStateLogRedirectRequest(address, data);
                             break;
-                       
                     }
                 }
             }
@@ -519,7 +469,7 @@ namespace Raft
         {
             if (this.NodeState != eNodeState.Leader)
                 return;
-            StateLogEntryRequest req = data as StateLogEntryRequest;//.DeserializeProtobuf<StateLogEntryRequest>();
+            StateLogEntryRequest req = data as StateLogEntryRequest;
             //Getting suggestion
             var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestionFromRequested(req);
             VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
@@ -544,7 +494,7 @@ namespace Raft
             if (this.NodeState != eNodeState.Follower)
                 return;
 
-            StateLogEntrySuggestion suggest = data as StateLogEntrySuggestion; //data.DeserializeProtobuf<StateLogEntrySuggestion>();
+            StateLogEntrySuggestion suggest = data as StateLogEntrySuggestion; 
 
             if (this.NodeTerm > suggest.LeaderTerm)  //Sending Leader is not Leader anymore
             {
@@ -799,9 +749,7 @@ namespace Raft
             switch (termState)
             {
                 case eTermComparationResult.CurrentTermIsHigher:
-
                     vote.VoteType = VoteOfCandidate.eVoteType.VoteReject;
-
                     break;
                 case eTermComparationResult.CurrentTermIsSmaller:
                     //Now this Node is Follower
@@ -819,7 +767,6 @@ namespace Raft
                         vote.VoteType = VoteOfCandidate.eVoteType.VoteReject;
                         break;
                     case eNodeState.Follower:
-
                         //Probably we can vote for this Node (if we didn't vote for any other one)
                         if (LastVotedTermId < req.TermId)
                         {
@@ -845,8 +792,6 @@ namespace Raft
                                 this.RemoveElectionTimer();
                                 this.RunElectionTimer();
                             }
-                           
-                            
                         }
                         else
                             vote.VoteType = VoteOfCandidate.eVoteType.VoteReject;
@@ -874,7 +819,6 @@ namespace Raft
                 {
                     VotesQuantity.Remove(endpointsid);
                 }
-
                 NodeStateLog.Clear_dStateLogEntryAcceptance_PeerDisconnected(endpointsid);
             }
         }
@@ -888,9 +832,7 @@ namespace Raft
         {
             //Node received a node
             var vote = data as VoteOfCandidate;
-
             var termState = CompareCurrentTermWithIncoming(vote.TermId);
-
             if (this.NodeState != eNodeState.Candidate)
                 return;
 
@@ -905,7 +847,6 @@ namespace Raft
                     if ((VotesQuantity.Count + 1) >= this.GetMajorityQuantity())                    
                     {
                         //Majority
-
                         //Node becomes a Leader
                         this.NodeState = eNodeState.Leader;
                         this.NodeStateLog.FlushSleCache();
@@ -949,7 +890,6 @@ namespace Raft
         void ParseStateLogRedirectRequest(NodeRaftAddress address, object data)
         {
             StateLogEntryRedirectRequest req = data as StateLogEntryRedirectRequest;
-            //StateLogEntryRedirectResponse resp = new StateLogEntryRedirectResponse(); //{ RedirectId = req.RedirectId };
 
             if (this.NodeState != eNodeState.Leader)  //Just return
                 return;
@@ -967,7 +907,6 @@ namespace Raft
         /// <param name="data"></param>
         void ParseStateLogEntryAccepted(NodeRaftAddress address, object data)
         {
-
             if (this.NodeState != eNodeState.Leader)
                 return;
 
@@ -990,10 +929,7 @@ namespace Raft
                 };
                 this.Sender.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat, this.NodeAddress, entitySettings.EntityName, true);
                 //---------------------------------------
-
-                //this.NodeStateLog.RemoveEntryFromDistribution(applied.StateLogEntryId, applied.StateLogEntryTerm);
                 InLogEntrySend = false;
-
                 ApplyLogEntry();
             }
         }
@@ -1125,7 +1061,6 @@ namespace Raft
                     {
                         if (this.LeaderHeartbeat == null)
                             return false;
-
                         return this.NodeStateLog.LastCommittedIndex == this.LeaderHeartbeat.LastStateLogCommittedIndex;
                     }
                 }
