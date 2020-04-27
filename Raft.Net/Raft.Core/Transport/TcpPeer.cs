@@ -21,12 +21,12 @@ namespace Raft.Transport
         IChannelHandlerContext _nettyclient;
         IChannel clientChannel = null;
         //cSprot1Parser _sprot1 = null;
-        TcpRaftNode trn = null;
+        RaftNode trn = null;
         public TcpMsgHandshake Handshake = null;
         public NodeAddress na = null;
         string _endPointSID = "";
 
-        public TcpPeer(IChannelHandlerContext client, TcpRaftNode rn)
+        public TcpPeer(IChannelHandlerContext client, RaftNode rn)
         {
             _nettyclient = client;
             trn = rn;
@@ -59,7 +59,7 @@ namespace Raft.Transport
             }
         }
 
-        public TcpPeer(string hostname, int port, TcpRaftNode rn)
+        public TcpPeer(string hostname, int port, RaftNode rn)
         {
             trn = rn;
            

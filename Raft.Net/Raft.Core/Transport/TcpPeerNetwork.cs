@@ -4,6 +4,7 @@
 */
 using DotNetty.Transport.Channels;
 using Raft.Core;
+using Raft.Core.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,14 +19,21 @@ namespace Raft.Transport
     /// <summary>
     /// Spider manages connections for all listed nodes of the net
     /// </summary>
-    public  class TcpPeerConnector : IPeerConnector, IDisposable
+    public  class TcpPeerNetwork : IPeerConnector, IDisposable
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
-        internal TcpRaftNode trn = null;
-        public TcpPeerConnector(TcpRaftNode trn)
+        internal RaftNode trn = null;
+        TcpPeerListener listener = null;
+        public TcpPeerNetwork(RaftNode trn)
         {
-            this.trn = trn;          
+            this.trn = trn;
+            
+        }
+        public void Start()
+        {
+            this.listener = new TcpPeerListener(this, trn.port);
+            this.listener.DoTcpServer();
         }
         public TcpPeer AddTcpClient(IChannelHandlerContext peer)
         {

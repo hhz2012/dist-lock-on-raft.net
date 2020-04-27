@@ -76,13 +76,13 @@ namespace LockService
                 {
                     if (Nodes.Count < 1)
                         return;
-                        var leader = Nodes.Where(r => ((TcpRaftNode)r.InnerNode).IsLeader())
-                        .Select(r => (TcpRaftNode)r.InnerNode).FirstOrDefault();
+                        var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
+                        .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
 
                         if (leader == null)
                             return;
 
-                        ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                        ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
@@ -96,13 +96,13 @@ namespace LockService
                 {
                     if (Nodes.Count < 1)
                         return;
-                    var leader = Nodes.Where(r => ((TcpRaftNode)r.InnerNode).IsLeader())
-                    .Select(r => (TcpRaftNode)r.InnerNode).FirstOrDefault();
+                    var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
+                    .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
 
                     if (leader == null)
                         return;
 
-                    ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                    ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
@@ -116,13 +116,13 @@ namespace LockService
                 {
                     if (Nodes.Count < 1)
                         return;
-                    var leader = Nodes.Where(r => ((TcpRaftNode)r.WorkNode).IsLeader())
-                    .Select(r => (TcpRaftNode)r.WorkNode).FirstOrDefault();
+                    var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
+                    .Select(r => (RaftNode)r.WorkNode).FirstOrDefault();
 
                     if (leader == null)
                         return;
                     Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                    ((TcpRaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                    ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
