@@ -977,7 +977,7 @@ namespace Raft
 
             if (res == eEntryAcceptanceResult.Committed)
             {
-                this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})");
+                this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                 RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat= new LeaderHeartbeat()
