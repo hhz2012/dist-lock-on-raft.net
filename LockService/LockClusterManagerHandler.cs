@@ -27,7 +27,7 @@ namespace Raft.Core.RaftEmulator
                 //Console.WriteLine($"command received:{command.Command},{command.Target}");
                 if (command.Command== "CreateShard")
                 {
-                    this.node.JoinShard(command);
+                //    this.node.JoinShard(command);
                 }
             }
             catch (Exception ex)

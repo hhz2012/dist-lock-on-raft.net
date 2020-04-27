@@ -27,11 +27,6 @@ namespace Raft.Transport
         {
             this.trn = trn;          
         }
-
-        //public void AddTcpClient(TcpClient peer)
-        //{   
-        //    var p = new TcpPeer(peer, trn);           
-        //}
         public TcpPeer AddTcpClient(IChannelHandlerContext peer)
         {
             var p = new TcpPeer(peer, trn);
@@ -97,15 +92,6 @@ namespace Raft.Transport
             _sync.EnterWriteLock();
             try
             {
-                if (peer.Handshake.NodeUID == trn.GetNodeByEntityName("default").NodeAddress.NodeUId)   //Self disconnect
-                {
-                 
-                    trn.NodeSettings.TcpClusterEndPoints.Where(r => r.EndPointSID == peer.EndPointSID)
-                        .FirstOrDefault().Me = true;
-                                        
-                    peer.Dispose(true);
-                    return;
-                }
 
                 //Choosing priority connection
                 if (!Peers.ContainsKey(peer.EndPointSID))

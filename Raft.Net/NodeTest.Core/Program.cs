@@ -18,39 +18,45 @@ namespace NodeTest.Core
         static void Main(string[] args)
         {
             var cluster = new LockClusterManager();
-            cluster.StartControlNodes(3);
-            Console.ReadLine();
-            cluster.TestSendData(
-                new ClusterCommand()
-                {
-                    Command = "CreateShard",
-                    Target = "",
-                    Targets = new List<string>()
-                     {
-                          "entity1",
-                          "entity2",
-                          "entity3"
-                     },
-                    IpAddress = new List<EndPoint>()
-                     {
-                          new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=11001
-                          },
-                           new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=11002
-                          },
-                            new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=11003
-                          }
-                     }
-                }
-                );
+            cluster.StartControlNodes(3).ConfigureAwait(false).GetAwaiter().GetResult();
+
+            while (true)
+            {
+                Console.ReadLine();
+            }
+
+            
+            //cluster.TestSendData(
+            //    new ClusterCommand()
+            //    {
+            //        Command = "CreateShard",
+            //        Target = "",
+            //        Targets = new List<string>()
+            //         {
+            //              "entity1",
+            //              "entity2",
+            //              "entity3"
+            //         },
+            //        IpAddress = new List<EndPoint>()
+            //         {
+            //              new EndPoint()
+            //              {
+            //                   ipAddress="127.0.0.1",
+            //                   port=11001
+            //              },
+            //               new EndPoint()
+            //              {
+            //                   ipAddress="127.0.0.1",
+            //                   port=11002
+            //              },
+            //                new EndPoint()
+            //              {
+            //                   ipAddress="127.0.0.1",
+            //                   port=11003
+            //              }
+            //         }
+            //    }
+            //    );
 
             while (true)
             {

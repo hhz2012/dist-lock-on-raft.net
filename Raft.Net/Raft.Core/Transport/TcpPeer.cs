@@ -32,38 +32,13 @@ namespace Raft.Transport
         public NodeAddress na = null;
         string _endPointSID = "";
 
-        //public TcpPeer(TcpClient client, TcpRaftNode rn)
-        //{
-        //    _client = client;
-        //    trn = rn;
-        //    try
-        //    {
-        //        stream = _client.GetStream();
-        //        SetupSprot();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine("can't connect to peer");
-        //        return;
-        //    }
-
-        //    trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) =>
-        //    {
-        //        //don't know why
-        //        //if (Handshake == null)
-        //        //this.Dispose();
-
-        //    }, null, true);
-
-        //    Task.Run(async () => await Read());
-        //}
         public TcpPeer(IChannelHandlerContext client, TcpRaftNode rn)
         {
             _nettyclient = client;
             trn = rn;
             try
             {
-                SetupSprot();
+              //  SetupSprot();
             }
             catch (Exception ex)
             {
@@ -79,7 +54,7 @@ namespace Raft.Transport
 
             }, null, true);
 
-            Task.Run(async () => await Read());
+           // Task.Run(async () => await Read());
         }
 
         /// <summary>
@@ -93,7 +68,15 @@ namespace Raft.Transport
                     return _endPointSID;
                 if (Handshake == null)
                     return String.Empty;
-                var rep = _client.Client.RemoteEndPoint.ToString();
+                string rep = null;
+                if (this.clientChannel != null)
+                {
+                    rep = this.clientChannel.RemoteAddress.ToString();
+                }
+                if (this._nettyclient != null)
+                {
+                    rep = this._nettyclient.Channel.RemoteAddress.ToString();
+                }
                 _endPointSID = rep.Substring(0, rep.IndexOf(':') + 1) + Handshake.NodeListeningPort;
                 return _endPointSID;
             }
@@ -105,22 +88,6 @@ namespace Raft.Transport
             //Task.Run(async () => await Connect(hostname, port));
         }
 
-        //async Task Connect(string hostname, int port)
-        //{
-        //    _client = new TcpClient();
-        //    try
-        //    {
-        //        await _client.ConnectAsync(hostname, port);
-        //        stream = _client.GetStream();
-        //        SetupSprot();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return;
-        //    }
-
-        //    await Read();
-        //}
         public  async Task Connect(string hostname, int port)
         {
             var group = new MultithreadEventLoopGroup();
@@ -134,12 +101,11 @@ namespace Raft.Transport
                              channel =>
                              {
                                  IChannelPipeline pipeline = channel.Pipeline;
-                              //   pipeline.AddLast(new LoggingHandler());
                                  pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
                                  pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
                                  pipeline.AddLast(new StringEncoder(), new StringDecoder());
 
-                                pipeline.AddLast("echo", new EchoClientHandler());
+                                pipeline.AddLast("echo", new EchoClientHandler(this));
                              }));
              
             IChannel clientChannel = await bootstrap.ConnectAsync(new IPEndPoint(IPAddress.Parse(hostname),port));
@@ -173,23 +139,13 @@ namespace Raft.Transport
                     case 1: //Handshake
 
                         Handshake = message.Message as TcpMsgHandshake;
-                        if (trn.GetNodeByEntityName("default").NodeAddress.NodeUId != this.Handshake.NodeUID)
-                        {
-                            //trn.log.Log(new WarningLogEntry()
-                            //{
-                            //    LogType = WarningLogEntry.eLogType.DEBUG,
-                            //    Description = $"{trn.port}> handshake from {this.Handshake.NodeListeningPort}"
-                            //});
-                        }
                         trn.spider.AddPeerToClusterEndPoints(this, true);
                         return;
                     case 2: //RaftMessage
 
                         if (this.na == null)
                             return;
-
                         var msg = message.Message as TcpMsgRaft;
-
                         Task.Run(() =>
                         {
                             try
@@ -213,13 +169,7 @@ namespace Raft.Transport
                     case 3: //Handshake ACK
 
                         Handshake = message.Message as TcpMsgHandshake;
-                        //trn.log.Log(new WarningLogEntry()
-                        //{
-                        //    LogType = WarningLogEntry.eLogType.DEBUG,
-                        //    Description = $"{trn.port}> ACK from {this.Handshake.NodeListeningPort}"
-                        //});
                         trn.spider.AddPeerToClusterEndPoints(this, false);
-
                         return;
                     case 4: //Free Message protocol
 
@@ -483,9 +433,10 @@ namespace Raft.Transport
     public class EchoClientHandler : ChannelHandlerAdapter
     {
         readonly IByteBuffer initialMessage;
-
-        public EchoClientHandler()
+        TcpPeer peer = null;
+        public EchoClientHandler(TcpPeer peer)
         {
+            this.peer = peer;
            // this.initialMessage = Unpooled.Buffer(1000);
           //  byte[] messageBytes = Encoding.UTF8.GetBytes("Hello world");
            // this.initialMessage.WriteBytes(messageBytes);
@@ -497,7 +448,8 @@ namespace Raft.Transport
         public override void ChannelRead(IChannelHandlerContext context, object message)
         {
             
-                Console.WriteLine("Received from server: " + message);
+//               Console.WriteLine("Received from server: " + message);
+            this.peer.OnRecieve(context, message as string).ConfigureAwait(false).GetAwaiter().GetResult();
             
         }
 
