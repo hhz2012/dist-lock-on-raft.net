@@ -7,6 +7,9 @@
   <ItemGroup>
     <Compile Remove="Transport\SPROT1.cs" />
     <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
+    <Compile Remove="Utils\SDictAutoIdentityLong.cs" />
+    <Compile Remove="Utils\SDictionary.cs" />
+    <Compile Remove="Utils\SQueue.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,10 +22,6 @@
     <Content Include="!!!Notes.txt" />
     <Content Include="!!!TODO.txt" />
     <Content Include="Log\Entry\!!!DBreezeScheme.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Utils\ProtobufSerializatorExtension.cs" />
   </ItemGroup>
 
   <ItemGroup>
