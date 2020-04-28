@@ -1,5 +1,10 @@
-﻿using Raft;
+﻿using DotNetty.Codecs;
+using DotNetty.Transport.Bootstrapping;
+using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Sockets;
+using Raft;
 using Raft.Core.RaftEmulator;
+using Raft.Core.Transport;
 using Raft.Transport;
 using System;
 using System.Collections.Generic;
@@ -90,10 +95,8 @@ namespace LockService
                         return;
                         var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
                         .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
-
                         if (leader == null)
                             return;
-
                         ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
@@ -110,34 +113,23 @@ namespace LockService
                         return;
                     var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
                     .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
-
                     if (leader == null)
                         return;
-
                     ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
-        public void TestWorkOperation(LockOper command)
+        public async Task TestWorkOperation(LockOper command)
         {
-            Task.Run(async () =>
-            {
-                string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-                //data = "test";
-               
-                    if (Nodes.Count < 1)
-                        return;
-                    var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
+           string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+           var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
                     .Select(r => (RaftNode)r.WorkNode).FirstOrDefault();
-
-                    if (leader == null)
-                        return;
-                    Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                    var result=await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
-                    Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
-               
-            });
+           if (leader == null)    return;
+           Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
+           var result=await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
+           Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
         }
+
         public void BootWorkerNode()
         {
             this.TestSendData(
@@ -172,5 +164,70 @@ namespace LockService
                }
                );
         }
+        public async void OpenServicePort()
+        {
+            int port = 9090;
+            try
+            {
+                var bossGroup = new MultithreadEventLoopGroup(1);
+                // 工作线程组，默认为内核数*2的线程数
+                var workerGroup = new MultithreadEventLoopGroup();
+
+                var bootstrap = new ServerBootstrap();
+                bootstrap
+                    .Group(bossGroup, workerGroup) // 设置主和工作线程组
+                    .Channel<TcpServerSocketChannel>() // 设置通道模式为TcpSocket
+                    .Option(ChannelOption.SoBacklog, 100) // 设置网络IO参数等，这里可以设置很多参数，当然你对网络调优和参数设置非常了解的话，你可以设置，或者就用默认参数吧
+                                                          //.Handler(new LoggingHandler("SRV-LSTN")) //在主线程组上设置一个打印日志的处理器
+                    .ChildHandler(new ActionChannelInitializer<ISocketChannel>(channel =>
+                    { //工作线程连接器 是设置了一个管道，服务端主线程所有接收到的信息都会通过这个管道一层层往下传输
+                      //同时所有出栈的消息 也要这个管道的所有处理器进行一步步处理
+                        IChannelPipeline pipeline = channel.Pipeline;
+                        //出栈消息，通过这个handler 在消息顶部加上消息的长度
+                        pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
+                        pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
+                        //业务handler ，这里是实际处理Echo业务的Handler
+                        //pipeline.AddLast("echo", new EchoServerHandler());
+                        pipeline.AddLast(new StringEncoder(), new StringDecoder());
+                        pipeline.AddLast("echo", new LockRequestHandler(this));
+                    }));
+
+                // bootstrap绑定到指定端口的行为 就是服务端启动服务，同样的Serverbootstrap可以bind到多个端口
+                IChannel boundChannel = await bootstrap.BindAsync(port);
+            }
+            catch (Exception ex)
+            {
+                //if (log != null)
+                //    log.Log(new WarningLogEntry() { Exception = ex });
+            }
+        }
     }
-}
+    public class LockRequestHandler : ChannelHandlerAdapter //管道处理基类，较常用
+    {
+        LockClusterManager manager = null;
+        public LockRequestHandler(LockClusterManager manager)
+        {
+            this.manager = manager;
+        }
+      
+
+        public override async void ChannelRead(IChannelHandlerContext context, object message)
+        {
+            LockOper op = new LockOper()
+            {
+                Key = "key",
+                Oper = "lock",
+                Session = "session1"
+            };
+            await manager.TestWorkOperation(op);
+            
+        }
+        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
+
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
+        {
+            Console.WriteLine("Exception: " + exception);
+            context.CloseAsync();
+        }
+    }
+    }
