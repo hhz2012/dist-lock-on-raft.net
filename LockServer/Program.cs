@@ -27,7 +27,9 @@ namespace LockServer
             }
             Console.WriteLine("worker node boot ok, start lock service");
             //open port and listen to request 
-            cluster.OpenServicePort();
+            //cluster.OpenServicePort();
+
+            cluster.OpenRpc();
             Console.WriteLine("open port on 9090");
             Console.ReadLine();
 

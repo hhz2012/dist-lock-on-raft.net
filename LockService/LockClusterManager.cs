@@ -1,13 +1,19 @@
-﻿using DotNetty.Codecs;
+﻿using Coldairarrow.DotNettyRPC;
+using DotNetty.Codecs;
+using DotNetty.Codecs.Http;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using LockServer;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Raft;
 using Raft.Core.RaftEmulator;
 using Raft.Core.Transport;
 using Raft.Transport;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +22,8 @@ namespace LockService
 {
     public class LockClusterManager
     {
-        public static string PathRoot=@"D:\Temp\RaftDBreeze\node\";
+        public static LockClusterManager manager = null;
+        public static string PathRoot = @"D:\Temp\RaftDBreeze\node\";
         object sync_nodes = new object();
         public List<LockSeriveControlNode> Nodes { get; set; } = new List<LockSeriveControlNode>();
         public static int CurrentPort = 10000;
@@ -53,10 +60,13 @@ namespace LockService
                     int Port = eps[i].Port;
                     var nodeName = "entity" + (i + 1);
                     trn = new LockSeriveControlNode(nodeName,
-                        new NodeSettings() { TcpClusterEndPoints = eps,
-                                             RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings } },
+                        new NodeSettings()
+                        {
+                            TcpClusterEndPoints = eps,
+                            RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings }
+                        },
                         Port
-                        , PathRoot+ nodeName, log);
+                        , PathRoot + nodeName, log);
                     this.Nodes.Add(trn);
 
                 }
@@ -64,7 +74,7 @@ namespace LockService
                 trn.Start();
                 System.Threading.Thread.Sleep((new Random()).Next(30, 350));
             }
-            for (int i=0;i<num;i++)
+            for (int i = 0; i < num; i++)
             {
                 await nodes[i].StartConnect();
             }
@@ -78,7 +88,7 @@ namespace LockService
         }
         public bool isWorkerReady()
         {
-            var leader = Nodes.Where(r => (r.WorkNode!=null)&&((RaftNode)r.WorkNode).IsLeader())
+            var leader = Nodes.Where(r => (r.WorkNode != null) && ((RaftNode)r.WorkNode).IsLeader())
                    .Select(r => ((RaftNode)r.WorkNode)).FirstOrDefault();
 
             return (leader != null);
@@ -93,11 +103,11 @@ namespace LockService
                 {
                     if (Nodes.Count < 1)
                         return;
-                        var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
-                        .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
-                        if (leader == null)
-                            return;
-                        ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
+                    var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
+                    .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
+                    if (leader == null)
+                        return;
+                    ((RaftNode)leader).AddLogEntry(System.Text.Encoding.UTF8.GetBytes(data));
                 }
             });
         }
@@ -119,15 +129,16 @@ namespace LockService
                 }
             });
         }
-        public async Task TestWorkOperation(LockOper command)
+        public async Task<string> TestWorkOperation(LockOper command)
         {
-           string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
-           var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
-                    .Select(r => (RaftNode)r.WorkNode).FirstOrDefault();
-           if (leader == null)    return;
-           Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-           var result=await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
-           Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+            var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
+                     .Select(r => (RaftNode)r.WorkNode).FirstOrDefault();
+            if (leader == null) return "null";
+            Console.WriteLine("start lock oper" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            var result = await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data));
+            Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            return "lockdone";
         }
 
         public void BootWorkerNode()
@@ -164,6 +175,15 @@ namespace LockService
                }
                );
         }
+        public  void OpenRpc()
+        {
+            LockClusterManager.manager = this;
+            RPCServer rPCServer = new RPCServer(9999);
+            rPCServer.RegisterService<IHello, Hello>();
+            rPCServer.Start();
+
+
+        }
         public async void OpenServicePort()
         {
             int port = 9090;
@@ -184,12 +204,9 @@ namespace LockService
                       //同时所有出栈的消息 也要这个管道的所有处理器进行一步步处理
                         IChannelPipeline pipeline = channel.Pipeline;
                         //出栈消息，通过这个handler 在消息顶部加上消息的长度
-                        pipeline.AddLast("framing-enc", new LengthFieldPrepender(2));
-                        pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(ushort.MaxValue, 0, 2, 0, 2));
-                        //业务handler ，这里是实际处理Echo业务的Handler
-                        //pipeline.AddLast("echo", new EchoServerHandler());
-                        pipeline.AddLast(new StringEncoder(), new StringDecoder());
-                        pipeline.AddLast("echo", new LockRequestHandler(this));
+                        pipeline.AddLast("encoder", new HttpResponseEncoder());
+                        pipeline.AddLast("decoder", new HttpRequestDecoder(4096, 8192, 8192, false));
+                        pipeline.AddLast("handler", new HelloServerHandler(this));
                     }));
 
                 // bootstrap绑定到指定端口的行为 就是服务端启动服务，同样的Serverbootstrap可以bind到多个端口
@@ -209,7 +226,7 @@ namespace LockService
         {
             this.manager = manager;
         }
-      
+
 
         public override async void ChannelRead(IChannelHandlerContext context, object message)
         {
@@ -220,7 +237,7 @@ namespace LockService
                 Session = "session1"
             };
             await manager.TestWorkOperation(op);
-            
+
         }
         public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
 
@@ -230,4 +247,26 @@ namespace LockService
             context.CloseAsync();
         }
     }
+    public interface IHello
+    {
+        string SayHello(string msg);
     }
+
+    public class Hello : IHello
+    {
+        public  string SayHello(string msg)
+        {
+            LockOper op = new LockOper()
+            {
+                Key = "key",
+                Oper = "lock",
+                Session = "session1"
+            };
+            var val=Task.Run(async () =>
+            {
+              return   await LockClusterManager.manager.TestWorkOperation(op).ConfigureAwait(false);
+            }).ConfigureAwait(false).GetAwaiter().GetResult();
+            return val;
+        }
+    }
+}

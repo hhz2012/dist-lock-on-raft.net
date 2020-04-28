@@ -1,9 +1,10 @@
 ﻿using LockService;
+using Raft.Core.RaftEmulator;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Raft.Core.RaftEmulator
+namespace LockService
 {
     public class WorkerHandler : ActionHandlerBase
     {
