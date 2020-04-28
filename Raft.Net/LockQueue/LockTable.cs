@@ -44,7 +44,7 @@ namespace LockQueueLib
                     entry = entry.Next;
                 }
                  
-            } while (entry.Next != null);
+            } while (entry!= null);
 
             //should not happen
             return null;

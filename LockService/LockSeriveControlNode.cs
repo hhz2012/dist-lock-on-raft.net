@@ -58,7 +58,16 @@ namespace LockService
         }
         public async Task<bool> DoWork(LockOper oper)
         {
-            return this.table.GetQueue(oper.Key).LockNoWait(oper.Session, LockType.Read);
+            try
+            {
+                if (this.table == null) return false;
+                return this.table.GetQueue(oper.Key).LockNoWait(oper.Session, LockType.Read);
+                
+            }
+            catch 
+            {
+                return false;
+            }
         }
         public async Task StartWorkNode(ClusterCommand command)
         {
