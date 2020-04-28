@@ -539,8 +539,8 @@ namespace Raft
                     t.Commit();
                 }
 
-                statemachine.VerbosePrint($"{statemachine.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
-                    $" { (GetEntryByIndexTerm(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term) != null)};");
+               // statemachine.VerbosePrint($"{statemachine.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
+                //    $" { (GetEntryByIndexTerm(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term) != null)};");
 
                 //Setting new internal LogId
                 PreviousStateLogId = StateLogId;

@@ -24,7 +24,6 @@ namespace LockService
         {
             //create 
             LockSeriveControlNode trn = null;
-            
             RaftEntitySettings re_settings = null;
             List<int> ipAddress = new List<int>();
             for (int i = 0; i < num; i++)
@@ -44,7 +43,6 @@ namespace LockService
                 //every node have seperate configuration
                 for (int index = 0; index < num; index++)
                     eps.Add(new PeerEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
-
                 lock (sync_nodes)
                 {
                     int Port = eps[i].Port;
@@ -65,6 +63,20 @@ namespace LockService
             {
                 await nodes[i].StartConnect();
             }
+        }
+        public bool isReady()
+        {
+            var leader = Nodes.Where(r => ((RaftNode)r.InnerNode).IsLeader())
+                   .Select(r => (RaftNode)r.InnerNode).FirstOrDefault();
+
+            return (leader != null);
+        }
+        public bool isWorkerReady()
+        {
+            var leader = Nodes.Where(r => (r.WorkNode!=null)&&((RaftNode)r.WorkNode).IsLeader())
+                   .Select(r => ((RaftNode)r.WorkNode)).FirstOrDefault();
+
+            return (leader != null);
         }
         public void TestSendData(ClusterCommand command)
         {
@@ -122,9 +134,43 @@ namespace LockService
                         return;
                     Console.WriteLine("start lock oper"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                     var result=await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
-                Console.WriteLine("await finished");
+                    Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
                
             });
+        }
+        public void BootWorkerNode()
+        {
+            this.TestSendData(
+               new ClusterCommand()
+               {
+                   Command = "CreateShard",
+                   Target = "",
+                   Targets = new List<string>()
+                    {
+                          "entity1",
+                          "entity2",
+                          "entity3"
+                    },
+                   IpAddress = new List<EndPoint>()
+                    {
+                          new EndPoint()
+                          {
+                               ipAddress="127.0.0.1",
+                               port=12001
+                          },
+                           new EndPoint()
+                          {
+                               ipAddress="127.0.0.1",
+                               port=12002
+                          },
+                            new EndPoint()
+                          {
+                               ipAddress="127.0.0.1",
+                               port=12003
+                          }
+                    }
+               }
+               );
         }
     }
 }

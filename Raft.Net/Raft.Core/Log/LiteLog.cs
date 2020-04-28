@@ -122,40 +122,6 @@ namespace Raft
                     LastCommittedIndex = toprow.Index;
                     LastCommittedIndexTerm = toprow.Term;
                 }
-            //using (var t = this.db.GetTransaction())
-            //{
-            //    var row = t.SelectBackwardFromTo<byte[], byte[]>(stateTableName,
-            //        new byte[] { 1 }.ToBytes(ulong.MaxValue, ulong.MaxValue), true,
-            //        new byte[] { 1 }.ToBytes(ulong.MinValue, ulong.MinValue), true)
-            //        .FirstOrDefault();
-            //    StateLogEntry sle = null;
-            //    if (row != null && row.Exists)
-            //    {
-            //        sle = StateLogEntry.BiserDecode(row.Value);
-            //        StateLogId = sle.Index;
-            //        StateLogTerm = sle.Term;
-            //        PreviousStateLogId = sle.PreviousStateLogId;
-            //        PreviousStateLogTerm = sle.PreviousStateLogTerm;
-
-                //        tempPrevStateLogId = PreviousStateLogId;
-                //        tempPrevStateLogTerm = PreviousStateLogTerm;
-                //        tempStateLogId = StateLogId;
-                //        tempStateLogTerm = StateLogTerm;
-                //        rn.NodeTerm = sle.Term;
-                //    }
-                //    var rowTerm = t.Select<byte[], byte[]>(stateTableName, new byte[] { 2 });
-                //    if (rowTerm.Exists)
-                //    {
-                //        LastCommittedIndex = rowTerm.Value.Substring(0, 8).To_UInt64_BigEndian();
-                //        LastCommittedIndexTerm = rowTerm.Value.Substring(8, 8).To_UInt64_BigEndian();
-                //    }
-
-                //    var rowBL = t.Select<byte[], ulong>(stateTableName, new byte[] { 3 });
-                //    if (rowBL.Exists)
-                //    {
-                //        LastBusinessLogicCommittedIndex = rowBL.Value;
-                //    }
-                //}
         }
 
         /// <summary>

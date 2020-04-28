@@ -26,23 +26,29 @@ namespace Raft
         public uint LeaderSynchronizationTimeOut { get; set; }
 
         public ulong LastAppliedIndex { get; set; }
-
-        void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
+        //leader operation 
         StateLogEntrySuggestion AddNextEntryToStateLogByLeader();
         StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null);
+        eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
+        //load local log for follower
+        StateLogEntrySuggestion GetNextStateLogEntrySuggestionFromRequested(StateLogEntryRequest req);
+        //follower operatoin
         void AddToLogFollower(StateLogEntrySuggestion suggestion);
+        //common 
+        StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
+        StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
+        void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
         void BusinessLogicIsApplied(ulong index);
+
+        //clear operations
         void ClearLogAcceptance();
         void ClearLogEntryForDistribution();
         void ClearStateLogStartingFromCommitted();
         void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
         void Dispose();
-        eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
-        void FlushSleCache();
-        StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
-        StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
-        StateLogEntrySuggestion GetNextStateLogEntrySuggestionFromRequested(StateLogEntryRequest req);
+       
+        
         bool SetLastCommittedIndexFromLeader(LeaderHeartbeat lhb);
     }
     public enum eEntryAcceptanceResult

@@ -1,4 +1,5 @@
-﻿using Raft.Transport;
+﻿using Raft.Core.Log;
+using Raft.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +9,6 @@ namespace Raft.Core.StateMachine
 {
     public class MemStateLog : IStateLog
     {
-        
-
         /// <summary>
         /// Main table that stores logs
         /// </summary>
@@ -45,11 +44,6 @@ namespace Raft.Core.StateMachine
         public ulong StateLogId { get; set; } = 0;
         public ulong StateLogTerm { get; set; } = 0;
 
-        public ulong PreviousStateLogId = 0;
-        public ulong PreviousStateLogTerm = 0;
-
-
-
         /// <summary>
         /// Follower part. State Log synchro with Leader.
         /// Indicates that synchronization request was sent to Leader
@@ -71,21 +65,14 @@ namespace Raft.Core.StateMachine
         /// </summary>
         Dictionary<ulong, StateLogEntryAcceptance> dStateLogEntryAcceptance = new Dictionary<ulong, StateLogEntryAcceptance>();
 
-        SortedDictionary<ulong, Tuple<ulong, StateLogEntry>> sleCache = new SortedDictionary<ulong, Tuple<ulong, StateLogEntry>>();
-        ulong sleCacheIndex = 0;
-        ulong sleCacheTerm = 0;
-        ulong sleCacheBusinessLogicIndex = 0;
-
-
         IndexTermDict<StateLogEntry> inMem = new IndexTermDict<StateLogEntry>();
-
-        public MemStateLog(RaftStateMachine rn)
+        LeaderSyncState leaderState = null;
+        public MemStateLog(RaftStateMachine rn,string path)
         {
             this.rn = rn;
             tblStateLogEntry = "mem_" + tblStateLogEntry;
-
+            leaderState = new LeaderSyncState(rn,path);
         }
-
         /// <summary>
         /// Secured by RaftNode
         /// </summary>
@@ -93,83 +80,6 @@ namespace Raft.Core.StateMachine
         {
 
         }
-
-        /// <summary>
-        /// Returns null if nothing to distribute
-        /// </summary>
-        /// <returns></returns>
-        StateLogEntrySuggestion GetNextLogEntryToBeDistributed()
-        {
-            if (qDistribution.Count < 1)
-                return null;
-
-            return new StateLogEntrySuggestion()
-            {
-                //StateLogEntry = qDistribution.Dequeue(),
-                StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
-                LeaderTerm = rn.NodeTerm
-            };
-        }
-
-
-        ulong tempPrevStateLogId = 0;
-        ulong tempPrevStateLogTerm = 0;
-        ulong tempStateLogId = 0;
-        ulong tempStateLogTerm = 0;
-
-
-        /// <summary>
-        /// Leader only.Stores logs before being distributed.
-        /// </summary>       
-        SortedDictionary<ulong, StateLogEntry> qDistribution = new SortedDictionary<ulong, StateLogEntry>();
-
-        /// <summary>
-        /// Is called from lock_operations
-        /// Adds to silo table, until is moved to log table.
-        /// This table can be cleared up on start
-        /// returns concatenated term+index inserted identifier
-        /// </summary>
-        /// <param name="data"></param>
-        /// <param name="externalID">if set up must be returned in OnCommitted to notify that command is executed</param>
-        /// <returns></returns>
-        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
-        {
-            /*
-             * Only nodes of the current term can be distributed
-             */
-
-            tempPrevStateLogId = tempStateLogId;
-            tempPrevStateLogTerm = tempStateLogTerm;
-
-            tempStateLogId++;
-            tempStateLogTerm = rn.NodeTerm;
-
-
-            StateLogEntry le = new StateLogEntry()
-            {
-                Index = tempStateLogId,
-                Data = data,
-                Term = tempStateLogTerm,
-                PreviousStateLogId = tempPrevStateLogId,
-                PreviousStateLogTerm = tempPrevStateLogTerm,
-                ExternalID = externalID
-            };
-
-            qDistribution.Add(le.Index, le);
-            return le;
-
-        }
-
-        /// <summary>
-        /// When Node is selected as leader it is cleared
-        /// </summary>
-        public void ClearLogEntryForDistribution()
-        {
-            qDistribution.Clear();
-        }
-
-
-
         /// <summary>
         /// under lock_operations
         /// Copyies from distribution silo table and puts in StateLog table       
@@ -177,13 +87,13 @@ namespace Raft.Core.StateMachine
         /// <returns></returns>
         public StateLogEntrySuggestion AddNextEntryToStateLogByLeader()
         {
-            var suggest = GetNextLogEntryToBeDistributed();
+            var suggest = this.leaderState.GetNextLogEntryToBeDistributed();
             if (suggest == null)
                 return null;
 
             //Restoring current values
-            PreviousStateLogId = suggest.StateLogEntry.PreviousStateLogId;
-            PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
+            //PreviousStateLogId = suggest.StateLogEntry.PreviousStateLogId;
+            //PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
             StateLogId = suggest.StateLogEntry.Index;
             StateLogTerm = suggest.StateLogEntry.Term;
             lock (inMem.Sync)
@@ -191,7 +101,6 @@ namespace Raft.Core.StateMachine
                 inMem.Add(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term, suggest.StateLogEntry);
             }
             return suggest;
-
         }
 
         /// <summary>
@@ -207,8 +116,6 @@ namespace Raft.Core.StateMachine
                 //Node tries to understand if it contains already this index/term, if not it will need synchronization
 
                 ulong populateFrom = 0;
-                Tuple<ulong, StateLogEntry> sleTpl;
-
                 lock (inMem.Sync)
                 {
                     if (inMem.Select(lhb.LastStateLogCommittedIndex, lhb.LastStateLogCommittedIndexTerm, out var rSle))
@@ -221,14 +128,11 @@ namespace Raft.Core.StateMachine
                     else
                         return false;
                 }
-
                 if (populateFrom > 0)
                     this.rn.Commited();
             }
             return true;
         }
-
-
         /// <summary>
         /// +
         /// Only Follower makes it. Clears its current Log
@@ -246,13 +150,7 @@ namespace Raft.Core.StateMachine
                     );
             }
         }
-
-        public void FlushSleCache()
-        {
-            if (!rn.entitySettings.DelayedPersistenceIsActive)
-                return;
-        }
-
+    
         /// <summary>
         /// under lock_operation control
         /// </summary>
@@ -282,9 +180,7 @@ namespace Raft.Core.StateMachine
             {
                 LeaderTerm = rn.NodeTerm
             };
-
             return le;
-
         }
         /// <summary>
         /// +
@@ -310,8 +206,6 @@ namespace Raft.Core.StateMachine
             {
                 throw ex;
             }
-
-
         }
 
         /// <summary>
@@ -327,35 +221,24 @@ namespace Raft.Core.StateMachine
                 if (this.LastCommittedIndex < logEntryId)
                     return null;
 
-                Tuple<ulong, StateLogEntry> sleTpl;
-
                 StateLogEntry isle = null;
-
                 lock (inMem.Sync)
                 {
                     foreach (var el in inMem.SelectForwardFromTo(logEntryId, ulong.MinValue, true, ulong.MaxValue, ulong.MaxValue))
                     {
                         if (el.Item3.FakeEntry)
                             continue;
-
                         return el.Item3;
                     }
 
                     return isle;
                 }
-
-
-
-                return null;
             }
             catch (Exception ex)
             {
                 throw ex;
             }
-
         }
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -381,30 +264,27 @@ namespace Raft.Core.StateMachine
                             }
                             return;
                         }
-
                         toDelete.Add(el);
                         pups++;
                     }
-
                     if (toDelete.Count > 0)
                         inMem.Remove(toDelete);
-
                     inMem.Add(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term, suggestion.StateLogEntry);
                 }
 
-                rn.VerbosePrint($"{rn.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
-                    $" { (GetEntryByIndexTerm(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term) != null)};");
+             //   rn.VerbosePrint($"{rn.NodeAddress.NodeAddressId}> AddToLogFollower (I/T): {suggestion.StateLogEntry.Index}/{suggestion.StateLogEntry.Term} -> Result:" +
+              //      $" { (GetEntryByIndexTerm(suggestion.StateLogEntry.Index, suggestion.StateLogEntry.Term) != null)};");
 
                 //Setting new internal LogId
-                PreviousStateLogId = StateLogId;
-                PreviousStateLogTerm = StateLogTerm;
+                this.leaderState.tempPrevStateLogId = StateLogId;
+                this.leaderState.tempPrevStateLogTerm = StateLogTerm;
                 StateLogId = suggestion.StateLogEntry.Index;
                 StateLogTerm = suggestion.StateLogEntry.Term;
 
-                tempPrevStateLogId = PreviousStateLogId;
-                tempPrevStateLogTerm = PreviousStateLogTerm;
-                tempStateLogId = StateLogId;
-                tempStateLogTerm = StateLogTerm;
+                //tempPrevStateLogId = PreviousStateLogId;
+                //tempPrevStateLogTerm = PreviousStateLogTerm;
+                this.leaderState.tempStateLogId = StateLogId;
+                this.leaderState.tempStateLogTerm = StateLogTerm;
 
                 if (suggestion.IsCommitted)
                 {
@@ -429,14 +309,11 @@ namespace Raft.Core.StateMachine
                         this.rn.Commited();
                     }
                 }
-
-
             }
             catch (Exception ex)
             {
 
             }
-
             //if (this.LastCommittedIndex < rn.LeaderHeartbeat.LastStateLogCommittedIndex)
             if (rn.LeaderHeartbeat != null && this.LastCommittedIndex < rn.LeaderHeartbeat.LastStateLogCommittedIndex)
             {
@@ -445,15 +322,11 @@ namespace Raft.Core.StateMachine
             else
                 LeaderSynchronizationIsActive = false;
         }
-
-
         public void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid)
         {
             foreach (var el in dStateLogEntryAcceptance)
                 el.Value.acceptedEndPoints.Remove(endpointsid);
         }
-
-      
         /// <summary>
         /// +
         /// Only Leader's proc.
@@ -471,13 +344,10 @@ namespace Raft.Core.StateMachine
                 return eEntryAcceptanceResult.AlreadyAccepted;    //already accepted
 
             StateLogEntryAcceptance acc = null;
-
             if (dStateLogEntryAcceptance.TryGetValue(applied.StateLogEntryId, out acc))
             {
                 if (acc.Term != applied.StateLogEntryTerm)
                     return eEntryAcceptanceResult.NotAccepted;   //Came from wrong Leader probably
-
-                //acc.Quantity += 1;              
                 acc.acceptedEndPoints.Add(address.EndPointSID);
             }
             else
@@ -488,13 +358,9 @@ namespace Raft.Core.StateMachine
                     Index = applied.StateLogEntryId,
                     Term = applied.StateLogEntryTerm
                 };
-
                 acc.acceptedEndPoints.Add(address.EndPointSID);
-
                 dStateLogEntryAcceptance[applied.StateLogEntryId] = acc;
             }
-
-
             if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
             {
                 this.LastAppliedIndex = applied.StateLogEntryId;
@@ -505,39 +371,24 @@ namespace Raft.Core.StateMachine
                 {
                     //Saving committed entry (all previous are automatically committed)
                     List<byte[]> lstCommited = new List<byte[]>();
-
-
                     lock (inMem.Sync)
                     {
                         foreach (var el in inMem.SelectForwardFromTo(this.LastCommittedIndex + 1, applied.StateLogEntryTerm, true, ulong.MaxValue, applied.StateLogEntryTerm))
                         {
                             lstCommited.Add(el.Item3.Data);
                         }
-
                     }
-
-
-
                     //Removing entry from command queue
                     //t.RemoveKey<byte[]>(tblAppendLogEntry, new byte[] { 1 }.ToBytes(applied.StateLogEntryTerm, applied.StateLogEntryId));                        
-                    qDistribution.Remove(applied.StateLogEntryId);
+                    this.leaderState.qDistribution.Remove(applied.StateLogEntryId);
                 }
-
-
-
                 this.LastCommittedIndex = applied.StateLogEntryId;
                 this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
-
-
                 this.rn.Commited();
-                //this.rn.Commited(applied.StateLogEntryId);
-
                 return eEntryAcceptanceResult.Committed;
-
             }
 
             return eEntryAcceptanceResult.Accepted;
-
         }
 
         /// <summary>
@@ -567,7 +418,6 @@ namespace Raft.Core.StateMachine
                     {
                         Console.WriteLine($"I: {el.Item1}; T: {el.Item2}; S: {el.Item3.IsCommitted}");
                     }
-
                 }
             }
             else
@@ -576,5 +426,14 @@ namespace Raft.Core.StateMachine
             }
         }
 
+        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
+        {
+            return this.leaderState.AddStateLogEntryForDistribution(data, externalID);
+        }
+
+        public void ClearLogEntryForDistribution()
+        {
+            this.leaderState.ClearLogEntryForDistribution();
+        }
     }
 }

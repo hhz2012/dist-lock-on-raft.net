@@ -207,7 +207,7 @@ namespace Raft
                 RemoveNoLeaderAddCommandTimer();
                 this.NodeState = eNodeState.Follower;
                 this.NodeStateLog.LeaderSynchronizationIsActive = false;
-                this.NodeStateLog.FlushSleCache();
+                //this.NodeStateLog.FlushSleCache();
                 VerbosePrint("Node {0} state is {1}", NodeAddress.NodeAddressId,this.NodeState);
                 IsRunning = false;
             }
@@ -670,21 +670,11 @@ namespace Raft
             NodeStateLog.LeaderSynchronizationRequestWasSent = DateTime.UtcNow;
 
             StateLogEntryRequest req = null;
-            if (entitySettings.InMemoryEntity && entitySettings.InMemoryEntityStartSyncFromLatestEntity)
-            {                
-                req = new StateLogEntryRequest()
-                {
-
-                     StateLogEntryId = this.LeaderHeartbeat.LastStateLogCommittedIndex == 0 ? 0 : this.LeaderHeartbeat.LastStateLogCommittedIndex-1                 
-                };
-            }
-            else
+          
+            req = new StateLogEntryRequest()
             {
-                req = new StateLogEntryRequest()
-                {
-                    StateLogEntryId = NodeStateLog.LastCommittedIndex                   
-                };
-            }
+                StateLogEntryId = NodeStateLog.LastCommittedIndex                   
+            };
             this.Sender.SendTo(this.LeaderNodeAddress, eRaftSignalType.StateLogEntryRequest, req, this.NodeAddress, entitySettings.EntityName);
         }
         /// <summary>
@@ -850,7 +840,7 @@ namespace Raft
                         //Majority
                         //Node becomes a Leader
                         this.NodeState = eNodeState.Leader;
-                        this.NodeStateLog.FlushSleCache();
+                        //this.NodeStateLog.FlushSleCache();
                         this.NodeStateLog.ClearLogAcceptance();
                         this.NodeStateLog.ClearLogEntryForDistribution();
 
@@ -953,9 +943,7 @@ namespace Raft
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.LeaderLogResendTimerElapse" });
             }
         }
-
         bool InLogEntrySend = false;
-
         /// <summary>
         /// Is called from lock_operations
         /// Tries to apply new entry, must be called from lock
@@ -969,7 +957,7 @@ namespace Raft
             if (suggest == null)
                 return;
 
-            VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
+            //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
 
             InLogEntrySend = true;                        
             RunLeaderLogResendTimer();
