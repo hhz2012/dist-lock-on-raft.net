@@ -8,7 +8,7 @@ namespace Raft.Core.RaftEmulator
     {
         public override bool DoAction(string entityName, ulong index, byte[] data)
         {
-            Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); 
+            //Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}"); 
             return true;
         }
     }

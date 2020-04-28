@@ -139,11 +139,11 @@ namespace Raft.Transport
                     case AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED:
                     case AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER:
                         //async waiting
-                        await resp.amre.WaitAsync();    //enable for amre
+                        resp.amre.Wait();    //enable for amre
                         resp.Dispose_MRE();
                         if (AsyncResponseHandler.df.TryRemove(msgIdStr, out resp))
                         {
-                            if (resp.IsRespOk)
+                           if (resp.IsRespOk)
                                 return true;
                         }
                         break;

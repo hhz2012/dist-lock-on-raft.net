@@ -135,9 +135,13 @@ namespace LockService
             var leader = Nodes.Where(r => ((RaftNode)r.WorkNode).IsLeader())
                      .Select(r => (RaftNode)r.WorkNode).FirstOrDefault();
             if (leader == null) return "null";
-            Console.WriteLine("start lock oper" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
-            var result = await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data));
-            Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            //Console.WriteLine("start lock oper" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            await Task.Run(async () =>
+            {
+                var result = await ((RaftNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
+            }
+        );
+           // Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
             return "lockdone";
         }
 
@@ -262,10 +266,11 @@ namespace LockService
                 Oper = "lock",
                 Session = "session1"
             };
-            var val=Task.Run(async () =>
-            {
-              return   await LockClusterManager.manager.TestWorkOperation(op).ConfigureAwait(false);
-            }).ConfigureAwait(false).GetAwaiter().GetResult();
+            var val = "val";
+            //var val=Task.Run(async () =>
+            //{
+            //  return   await LockClusterManager.manager.TestWorkOperation(op).ConfigureAwait(false);
+            //}).ConfigureAwait(false).GetAwaiter().GetResult();
             return val;
         }
     }

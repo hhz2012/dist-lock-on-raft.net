@@ -86,7 +86,11 @@ namespace LockServer
                         Oper = "lock",
                         Session = "session1"
                     };
-                    await manager.TestWorkOperation(op);
+                    var ack = Task.Run(async () => {
+                        await manager.TestWorkOperation(op);
+                        return 1;
+                    }).GetAwaiter().GetResult();
+                    
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);
                     break;
                 case "/json":

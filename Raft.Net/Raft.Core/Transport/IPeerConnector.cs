@@ -2,6 +2,7 @@
   Copyright (C) 2018 tiesky.com / Alex Solovyov
   It's a free software for those, who think that it should be free.
 */
+using Biser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,7 @@ namespace Raft
         /// <param name="senderNodeAddress"></param>
         /// <param name="entityName"></param>
         /// <param name="highPriority"></param>
-        void SendToAll(eRaftSignalType signalType, object data, NodeRaftAddress senderNodeAddress, string entityName, bool highPriority = false);
+        void SendToAll(eRaftSignalType signalType, IEncoder data, NodeRaftAddress senderNodeAddress, string entityName, bool highPriority = false);
 
 
         /// <summary>
@@ -35,6 +36,6 @@ namespace Raft
         /// <param name="data"></param>
         /// <param name="senderNodeAddress"></param>
         /// <param name="entityName"></param>
-        void SendTo(NodeRaftAddress nodeAddress,eRaftSignalType signalType, object data, NodeRaftAddress senderNodeAddress, string entityName);
+        void SendTo(NodeRaftAddress nodeAddress,eRaftSignalType signalType, IEncoder data, NodeRaftAddress senderNodeAddress, string entityName);
     }
 }

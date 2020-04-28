@@ -60,8 +60,9 @@ namespace LockService
         {
             try
             {
-                if (this.table == null) return false;
-                return this.table.GetQueue(oper.Key).LockNoWait(oper.Session, LockType.Read);
+                //  if (this.table == null) return false;
+                //  return this.table.GetQueue(oper.Key).LockNoWait(oper.Session, LockType.Read);
+                return true;
                 
             }
             catch 

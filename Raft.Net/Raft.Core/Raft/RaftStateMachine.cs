@@ -473,7 +473,7 @@ namespace Raft
             StateLogEntryRequest req = data as StateLogEntryRequest;
             //Getting suggestion
             var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestionFromRequested(req);
-            VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
+            //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
 
             if (suggestion != null)
             {
@@ -505,7 +505,7 @@ namespace Raft
 
             if (this.NodeTerm < suggest.LeaderTerm)
                 this.NodeTerm = suggest.LeaderTerm;
-            if (suggest.StateLogEntry.Index <= NodeStateLog.LastCommittedIndex) //Preventing same entry income, can happen if restoration was sent twice (while switch of leaders)
+            if (suggest.StateLogEntry==null||(suggest.StateLogEntry.Index <= NodeStateLog.LastCommittedIndex)) //Preventing same entry income, can happen if restoration was sent twice (while switch of leaders)
                 return;  //breakpoint don't remove
 
             //Checking if node can accept current suggestion
@@ -907,7 +907,7 @@ namespace Raft
 
             if (res == eEntryAcceptanceResult.Committed)
             {
-                this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
+                //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                 RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat= new LeaderHeartbeat()

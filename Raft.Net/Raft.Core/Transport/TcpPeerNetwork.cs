@@ -2,6 +2,7 @@
   Copyright (C) 2018 tiesky.com / Alex Solovyov
   It's a free software for those, who think that it should be free.
 */
+using Biser;
 using DotNetty.Transport.Channels;
 using Raft.Core;
 using Raft.Core.Transport;
@@ -116,7 +117,7 @@ namespace Raft.Transport
                 }
                 else
                 {
-                    Peers[peer.EndPointSID].Send(RaftCommand.Ping,"ping"); //ping
+                    //Peers[peer.EndPointSID].Send(RaftCommand.Ping,"ping"); //ping
                     //removing incoming connection                    
                     peer.Dispose(true);
                     return;
@@ -222,7 +223,7 @@ namespace Raft.Transport
 
             }
         }
-        public void SendToAll(eRaftSignalType signalType, object data, NodeRaftAddress senderNodeAddress, string entityName, bool highPriority = false)
+        public void SendToAll(eRaftSignalType signalType, IEncoder data, NodeRaftAddress senderNodeAddress, string entityName, bool highPriority = false)
         {
             try
             {
@@ -243,7 +244,7 @@ namespace Raft.Transport
 
                 foreach (var peer in peers)
                 {
-                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data.BiserEncode() });
                 }
             }
             catch (Exception ex)
@@ -252,14 +253,14 @@ namespace Raft.Transport
             }
         }
 
-        public void SendTo(NodeRaftAddress nodeAddress, eRaftSignalType signalType,object data, NodeRaftAddress senderNodeAddress, string entityName)
+        public void SendTo(NodeRaftAddress nodeAddress, eRaftSignalType signalType, IEncoder data, NodeRaftAddress senderNodeAddress, string entityName)
         {
             try
             {
                 TcpPeer peer = null;
                 if (Peers.TryGetValue(nodeAddress.EndPointSID, out peer))
                 {
-                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data });
+                    peer.Send(RaftCommand.RaftMessage,new TcpMsgRaft() { EntityName = entityName, RaftSignalType = signalType, Data = data.BiserEncode() });
                 }
             }
             catch (Exception ex)
@@ -267,36 +268,7 @@ namespace Raft.Transport
             }
         }
 
-        public void SendToAllFreeMessage(string msgType, string dataString="", byte[] data=null, NodeRaftAddress senderNodeAddress = null)
-        {
-            try
-            {
-                List<TcpPeer> peers = null;
-                _sync.EnterReadLock();
-                try
-                {
-                    peers = Peers.Values.ToList();
-                }
-                catch (Exception ex)
-                {
-                    //throw;
-                }
-                finally
-                {
-                    _sync.ExitReadLock();
-                }
-
-                foreach (var peer in peers)
-                {
-                    peer.Send(RaftCommand.FreeMessage,new TcpMsg() { DataString = dataString, MsgType = msgType, Data = data });
-                }
-
-            }
-            catch (Exception ex)
-            {
-            }
-        }
-
+     
         int disposed = 0;
         public void Dispose()
         {

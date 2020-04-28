@@ -7,12 +7,14 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Biser;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Newtonsoft.Json;
+//using Newtonsoft.Json;
 using Raft.Core;
 using Raft.Core.Transport;
 
@@ -115,7 +117,7 @@ namespace Raft.Transport
                                 var node = trn.GetNodeByEntityName(msg.EntityName);
                                 if (node != null)
                                 {
-                                    node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.Data);
+                                    node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.orginalObject);
                                 }
                                 else
                                 {
@@ -153,27 +155,33 @@ namespace Raft.Transport
             }
         }
         
-        public void Send(int Command,object msg)
+        public void Send(int Command, IEncoder msg)
         {
-            RaftCommand cmd = new RaftCommand()
-            {
-                Code = Command,
-                Message = msg
-            };
-            var text = Newtonsoft.Json.JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                TypeNameHandling = TypeNameHandling.All,
-                TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
-            });
+            //RaftCommand cmd = new RaftCommand()
+            //{
+            //    Code = Command,
+            //    Message = msg
+            //};
+            //var text = JsonConvert.SerializeObject(cmd, new JsonSerializerSettings()
+            //{
+            //    NullValueHandling = NullValueHandling.Ignore,
+            //    TypeNameHandling = TypeNameHandling.All,
+            //    TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
+            //});
 
-           // var data = System.Text.Encoding.UTF8.GetBytes("hello world");
+            //
+            string str = $"{Command}," + Convert.ToBase64String(msg.BiserEncode());
+
             if (this._nettyclient != null)
-                this._nettyclient.WriteAndFlushAsync(text);
+            {
+                this._nettyclient.WriteAndFlushAsync(str);
+                //this._nettyclient.WriteAndFlushAsync();
+            }
             else if (this.clientChannel != null)
             {
-                this.clientChannel.WriteAndFlushAsync(text);
-                
+                this.clientChannel.WriteAndFlushAsync(str);
+                //this.clientChannel.WriteAndFlushAsync(msg.BiserEncode());
+
             }
             else
             {
@@ -186,14 +194,60 @@ namespace Raft.Transport
             //
             if (!string.IsNullOrEmpty(msgstr))
             {
-                RaftCommand  msgObj = Newtonsoft.Json.JsonConvert.DeserializeObject<RaftCommand>(msgstr, new JsonSerializerSettings()
+                //RaftCommand  msgObj = Newtonsoft.Json.JsonConvert.DeserializeObject<RaftCommand>(msgstr, new JsonSerializerSettings()
+                //{
+                //    NullValueHandling = NullValueHandling.Ignore,
+                //    TypeNameHandling = TypeNameHandling.All,
+                //    TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
+                //}
+                //);
+                int index = msgstr.IndexOf(',');
+                string num = msgstr.Substring(0, index);
+                string base64 = msgstr.Substring(index + 1);
+                byte[] data= Convert.FromBase64String(base64);
+                RaftCommand cmd = new RaftCommand();
+                cmd.Code = Convert.ToInt32(num);
+                switch (cmd.Code)
                 {
-                    NullValueHandling = NullValueHandling.Ignore,
-                    TypeNameHandling = TypeNameHandling.All,
-                    TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full
+                    case RaftCommand.Handshake:
+                        cmd.Message = TcpMsgHandshake.BiserDecode(data);
+                        break;
+                    case RaftCommand.HandshakeACK:
+                        cmd.Message = TcpMsgHandshake.BiserDecode(data);
+                        break;
+                    case RaftCommand.RaftMessage:
+                        cmd.Message = TcpMsgRaft.BiserDecode(data);
+                        TcpMsgRaft t = (TcpMsgRaft)cmd.Message;
+                        switch (t.RaftSignalType)
+                        {
+                            case eRaftSignalType.LeaderHearthbeat:
+                                t.orginalObject = LeaderHeartbeat.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.CandidateRequest:
+                                t.orginalObject = CandidateRequest.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.StateLogEntryAccepted:
+                                t.orginalObject = StateLogEntryApplied.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.StateLogEntryRequest:
+                                t.orginalObject = StateLogEntryRequest.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.StateLogEntrySuggestion:
+                                t.orginalObject = StateLogEntrySuggestion.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.StateLogRedirectRequest:
+                                t.orginalObject = StateLogEntryRedirectRequest.BiserDecode(t.Data);
+                                break;
+                            case eRaftSignalType.VoteOfCandidate:
+                                t.orginalObject = VoteOfCandidate.BiserDecode(t.Data);
+                                break;
+                        }
+                        break;
+                    case RaftCommand.FreeMessage:
+                        cmd.Message = TcpMsg.BiserDecode(data);
+                        break;
                 }
-                );
-                this.packetParser(msgObj as RaftCommand);
+                this.packetParser(cmd as RaftCommand);
             }
         }
 

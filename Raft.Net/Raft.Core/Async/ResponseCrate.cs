@@ -21,34 +21,41 @@ namespace Raft
         public Action<Tuple<bool, byte[]>> callBack = null;
         public bool IsRespOk = false;
 
-        public AsyncManualResetEvent amre = null;
+        public ManualResetEventSlim amre = null;
 
         public DateTime created = DateTime.UtcNow;
         public int TimeoutsMs = 30000;
 
-        public void Init_MRE()
-        {
-            mre = new ManualResetEvent(false);
-        }
+        //public void Init_MRE()
+        //{
+        //    mre = new ManualResetEvent(false);
+        //}
 
         /// <summary>
         /// Works faster with timer than WaitOneAsync
         /// </summary>
         public void Init_AMRE()
         {
-            amre = new AsyncManualResetEvent();
+            amre = new ManualResetEventSlim();
         }
 
         public void Set_MRE()
         {
-
-            if (mre != null)
+            try
             {
-                mre.Set();
+                //if (mre != null)
+                //{
+                //    mre.Set();
+                //}
+                //else
+                if (amre != null)
+                {
+                    amre.Set();
+                }
             }
-            else if (amre != null)
+            catch (Exception ex)
             {
-                amre.Set();
+
             }
 
         }
@@ -79,13 +86,14 @@ namespace Raft
             if (System.Threading.Interlocked.CompareExchange(ref IsDisposed, 1, 0) != 0)
                 return;
 
-            if (mre != null)
-            {
-                mre.Set();
-                mre.Dispose();
-                mre = null;
-            }
-            else if (amre != null)
+            //if (mre != null)
+            //{
+            //    mre.Set();
+            //    mre.Dispose();
+            //    mre = null;
+            //}
+            //else
+            if (amre != null)
             {
                 amre.Set();
                 amre = null;

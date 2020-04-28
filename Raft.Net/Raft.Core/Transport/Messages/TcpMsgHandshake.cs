@@ -12,7 +12,7 @@ using DBreeze.Utils;
 
 namespace Raft.Transport
 {    
-    public class TcpMsgHandshake 
+    public class TcpMsgHandshake : Biser.IEncoder
     {
         public TcpMsgHandshake()
         {
@@ -26,7 +26,43 @@ namespace Raft.Transport
         /// </summary>        
         public long NodeUID { get; set; }
 
-      
+        public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)
+        {
+            Biser.Encoder enc = new Biser.Encoder(existingEncoder);
+
+            enc
+            .Add(NodeListeningPort)
+            .Add(NodeUID)
+            ;
+            return enc;
+        }
+
+        public static TcpMsgHandshake BiserDecode(byte[] enc = null, Biser.Decoder extDecoder = null) //!!!!!!!!!!!!!! change return type
+        {
+            Biser.Decoder decoder = null;
+            if (extDecoder == null)
+            {
+                if (enc == null || enc.Length == 0)
+                    return null;
+                decoder = new Biser.Decoder(enc);
+                if (decoder.CheckNull())
+                    return null;
+            }
+            else
+            {
+                if (extDecoder.CheckNull())
+                    return null;
+                else
+                    decoder = extDecoder;
+            }
+
+            TcpMsgHandshake m = new TcpMsgHandshake();  //!!!!!!!!!!!!!! change return type
+
+            m.NodeListeningPort = decoder.GetInt();
+            m.NodeUID = decoder.GetLong();
+
+            return m;
+        }
 
     }
 }
