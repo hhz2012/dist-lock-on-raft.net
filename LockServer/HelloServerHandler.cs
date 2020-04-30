@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace LockServer
+namespace HttpServer
 {
     using System.Text;
     using DotNetty.Buffers;
@@ -10,8 +10,9 @@ namespace LockServer
     using DotNetty.Transport.Channels;
     using System;
     using DotNetty.Common;
+    using System.Threading.Tasks;
 
-    public  class HelloServerHandler : ChannelHandlerAdapter
+    sealed class HelloServerHandler : ChannelHandlerAdapter
     {
         static readonly ThreadLocalCache Cache = new ThreadLocalCache();
 
@@ -39,36 +40,48 @@ namespace LockServer
         static readonly AsciiString ServerEntity = HttpHeaderNames.Server;
 
         volatile ICharSequence date = Cache.Value;
-
+        public override bool IsSharable => true;
         static int JsonLen() => Encoding.UTF8.GetBytes(NewMessage().ToJsonFormat()).Length;
 
         static MessageBody NewMessage() => new MessageBody("Hello, World!");
 
-        public override void ChannelRead(IChannelHandlerContext ctx, object message)
+        public  override void ChannelRead(IChannelHandlerContext ctx, object message)
         {
-            if (message is IHttpRequest request)
-            {
-                try
-                {
-                    this.Process(ctx, request);
-                }
-                finally
-                {
-                    ReferenceCountUtil.Release(message);
-                }
-            }
-            else
-            {
-                ctx.FireChannelRead(message);
-            }
+          
+                   if (message is IHttpRequest request)
+                   {
+                       try
+                       {
+                           this.Process(ctx, request);
+                           // new Task(() => Process(ctx, request), TaskCreationOptions.HideScheduler).RunSynchronously();
+                       }
+                       finally
+                       {
+                           ReferenceCountUtil.Release(message);
+                       }
+                   }
+                   else
+                   {
+                       ctx.FireChannelRead(message);
+                   }
+             
         }
-
-        void Process(IChannelHandlerContext ctx, IHttpRequest request)
+        //void Process(IChannelHandlerContext ctx, IHttpRequest request)
+        //{
+        //    new Task(() => Process0(ctx, request), TaskCreationOptions.HideScheduler).RunSynchronously();
+        //}
+        async void Process(IChannelHandlerContext ctx, IHttpRequest request)
         {
+          
             string uri = request.Uri;
             switch (uri)
             {
                 case "/plaintext":
+                    //var ack = Task.Run(async () => {
+                    //    await Task.Delay(10);
+                    //    return 1;
+                    //    }).GetAwaiter().GetResult();
+                    //await Task.Delay(10).ConfigureAwait(false);
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);
                     break;
                 case "/json":

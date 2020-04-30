@@ -13,6 +13,7 @@ namespace LockServer
     using LockService;
     using System.Threading.Tasks;
 
+    
     public  class HelloServerHandler : ChannelHandlerAdapter
     {
         public HelloServerHandler(LockClusterManager manager)
@@ -46,6 +47,7 @@ namespace LockServer
         static readonly AsciiString ServerEntity = HttpHeaderNames.Server;
 
         volatile ICharSequence date = Cache.Value;
+        public override bool IsSharable => true;
 
         static int JsonLen() => Encoding.UTF8.GetBytes(NewMessage().ToJsonFormat()).Length;
 
@@ -86,10 +88,10 @@ namespace LockServer
                         Oper = "lock",
                         Session = "session1"
                     };
-                    var ack = Task.Run(async () => {
-                        await manager.TestWorkOperation(op);
-                        return 1;
-                    }).GetAwaiter().GetResult();
+                    //var ack = Task.Run(async () => {
+                    //    await manager.TestWorkOperation(op);
+                    //    return 1;
+                    //}).GetAwaiter().GetResult();
                     
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);
                     break;
