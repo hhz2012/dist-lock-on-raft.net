@@ -36,12 +36,8 @@ namespace Raft
         public object lock_Operations = new object();        
         internal TimeMaster TM = null;
         public eNodeState NodeState = eNodeState.Follower;
-
-     
         public HashSet<string> VotesQuantity = new HashSet<string>();
-
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
-
         /// <summary>
         /// Current node Term
         /// </summary>
@@ -62,7 +58,6 @@ namespace Raft
         /// Received Current leader heartbeat time
         /// </summary>
         public DateTime LeaderHeartbeatArrivalTime = DateTime.MinValue;
-
         /// <summary>
         /// If makes Debug outputs
         /// </summary>
@@ -123,7 +118,6 @@ namespace Raft
             this.NodeStateLog.Dispose();
             this.NodeStateLog = null;
         }
-
         /// <summary>
         /// Is node a leader
         /// </summary>
@@ -195,7 +189,6 @@ namespace Raft
                 IsRunning = false;
             }
         }
-      
         /// <summary>
         /// 
         /// </summary>
@@ -322,9 +315,6 @@ namespace Raft
             };
             this.network.SendTo(address, eRaftSignalType.StateLogEntryAccepted, applied, this.NodeAddress, entitySettings.EntityName);          
         }
-
-       
-
         bool IsLeaderSynchroTimerActive
         {
             get
@@ -652,17 +642,9 @@ namespace Raft
                     break;               
             }
         }
-
-
-       
         public bool InLogEntrySend = false;
- 
-
         //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
         public Queue<Tuple<byte[],byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
-
-       
-
         /// <summary>
         /// NodeIsInLatestState
         /// </summary>
