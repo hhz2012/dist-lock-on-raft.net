@@ -27,18 +27,18 @@ namespace Raft
         /// <summary>
         /// Communication interface
         /// </summary>
-        IPeerConnector network = null;
+        public IPeerConnector network = null;
         /// <summary>
         /// Node settings
         /// </summary>
         internal RaftEntitySettings entitySettings = null;
-        readonly IWarningLog Log = null;
-        object lock_Operations = new object();        
+        public readonly IWarningLog Log = null;
+        public object lock_Operations = new object();        
         internal TimeMaster TM = null;
         public eNodeState NodeState = eNodeState.Follower;
 
-        Random rnd = new Random();
-        HashSet<string> VotesQuantity = new HashSet<string>();
+     
+        public HashSet<string> VotesQuantity = new HashSet<string>();
 
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
 
@@ -49,7 +49,7 @@ namespace Raft
         /// <summary>
         /// Node StateLog
         /// </summary>
-        IStateLog NodeStateLog = null;
+        public IStateLog NodeStateLog = null;
         /// <summary>
         /// Address of the current node
         /// </summary>
@@ -57,11 +57,11 @@ namespace Raft
         /// <summary>
         /// In case if current node is not Leader. It holds leader address
         /// </summary>
-        NodeRaftAddress LeaderNodeAddress = null;
+        public NodeRaftAddress LeaderNodeAddress = null;
         /// <summary>
         /// Received Current leader heartbeat time
         /// </summary>
-        DateTime LeaderHeartbeatArrivalTime = DateTime.MinValue;
+        public DateTime LeaderHeartbeatArrivalTime = DateTime.MinValue;
 
         /// <summary>
         /// If makes Debug outputs
@@ -81,6 +81,7 @@ namespace Raft
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
         IActionHandler handler;
         public string NodeName { get; set; }
+        private StateMachineTimerLoop loop = null;
         /// <summary>
         /// 
         /// </summary>
@@ -99,6 +100,7 @@ namespace Raft
            
             //Starting time master
             this.TM = new TimeMaster(log);
+            this.loop = new StateMachineTimerLoop(this.TM, settings, this);
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, workPath);
             //Adding AddLogEntryAsync cleanup
@@ -180,10 +182,10 @@ namespace Raft
         {
             lock (lock_Operations)
             {
-                RemoveElectionTimer();
-                RemoveLeaderHeartbeatWaitingTimer();
-                RemoveLeaderTimer();
-                RemoveNoLeaderAddCommandTimer();
+                this.loop.RemoveElectionTimer();
+                this.loop.RemoveLeaderHeartbeatWaitingTimer();
+                this.loop.RemoveLeaderTimer();
+                this.loop.RemoveNoLeaderAddCommandTimer();
                 this.NodeState = eNodeState.Follower;
                 this.NodeStateLog.LeaderSynchronizationIsActive = false;
                 //this.NodeStateLog.FlushSleCache();
@@ -236,110 +238,7 @@ namespace Raft
             }
 
         }
-        #region "TIMERS HANDLER"
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void RunElectionTimer()
-        {
-            if (this.TM.Election_TimerId == 0)
-            {
-                rnd.Next(System.Threading.Thread.CurrentThread.ManagedThreadId);
-                int seed = rnd.Next(entitySettings.ElectionTimeoutMinMs, entitySettings.ElectionTimeoutMaxMs);
-                this.TM.Election_TimerId = this.TM.FireEventEach((uint)seed, ElectionTimeout, null, true);
-                VerbosePrint("Node {0} RunElectionTimer {1} ms", NodeAddress.NodeAddressId, seed);
-            }
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        void RunLeaderHeartbeatWaitingTimer()
-        {
-            if (this.TM.LeaderHeartbeat_TimerId == 0)
-                this.TM.LeaderHeartbeat_TimerId = this.TM.FireEventEach(entitySettings.LeaderHeartbeatMs, LeaderHeartbeatTimeout, null, false);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void RunLeaderTimer()
-        {
-            if (this.TM.Leader_TimerId == 0)
-            {
-                //Raising quickly one 
-                LeaderTimerElapse(null);
-                this.TM.Leader_TimerId = this.TM.FireEventEach(entitySettings.LeaderHeartbeatMs / 2, LeaderTimerElapse, null, false, "LEADER");
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void RemoveLeaderTimer()
-        {
-            if (this.TM.Leader_TimerId > 0)
-            {                
-                this.TM.RemoveEvent(this.TM.Leader_TimerId);
-                this.TM.Leader_TimerId = 0;
-            }
-        }
-
-        void RunNoLeaderAddCommandTimer()
-        {
-            if (this.TM.NoLeaderAddCommand_TimerId == 0)
-                this.TM.NoLeaderAddCommand_TimerId = this.TM.FireEventEach(entitySettings.NoLeaderAddCommandResendIntervalMs, (o) => {
-                    this.AddLogEntry(null);
-                }, null, false);
-        }
-
-        void RemoveNoLeaderAddCommandTimer()
-        {
-            if (this.TM.NoLeaderAddCommand_TimerId > 0)
-            {
-                this.TM.RemoveEvent(this.TM.NoLeaderAddCommand_TimerId);
-                this.TM.NoLeaderAddCommand_TimerId = 0;
-            }
-        }
-        void RunLeaderLogResendTimer()
-        {
-            if (this.TM.LeaderLogResend_TimerId == 0)
-            {
-                this.TM.LeaderLogResend_TimerId = this.TM.FireEventEach(entitySettings.LeaderLogResendIntervalMs, LeaderLogResendTimerElapse, null, true);
-            }
-        }
-        void RemoveLeaderLogResendTimer()
-        {
-            if (this.TM.LeaderLogResend_TimerId > 0)
-            {
-                this.TM.RemoveEvent(this.TM.LeaderLogResend_TimerId);
-                this.TM.LeaderLogResend_TimerId = 0;
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void RemoveElectionTimer()
-        {
-            if (this.TM.Election_TimerId > 0)
-            {                
-                this.TM.RemoveEvent(this.TM.Election_TimerId);
-                this.TM.Election_TimerId = 0;
-            }
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        void RemoveLeaderHeartbeatWaitingTimer()
-        {
-            if (this.TM.LeaderHeartbeat_TimerId > 0)
-            {                
-                this.TM.RemoveEvent(this.TM.LeaderHeartbeat_TimerId);
-                this.TM.LeaderHeartbeat_TimerId = 0;
-            }
-        }
-        #endregion
+       
         /// <summary>
         /// Only for Leader.
         /// Follower requests new Log Entry Index from the Leader and Leader answers to the Follower
@@ -511,107 +410,7 @@ namespace Raft
 
             return res;
         }
-        #region leader selection loop
-        /// <summary>
-        /// If this action works, it can mean that Node can give a bid to be the candidate after specified time interval
-        /// Starts Election timer only in case if it's not running yet
-        /// </summary>
-        /// <param name="userToken"></param>
-        void LeaderHeartbeatTimeout(object userToken)
-        {
-            try
-            {
-                lock (lock_Operations)
-                {
-                    if (NodeState == eNodeState.Leader) //me is the leader
-                    {
-                        RemoveLeaderHeartbeatWaitingTimer();
-                        return;
-                    }
-
-                    if (DateTime.Now.Subtract(this.LeaderHeartbeatArrivalTime).TotalMilliseconds < this.entitySettings.LeaderHeartbeatMs)
-                        return; //Early to elect, we receive completely heartbeat from the leader
-
-                    VerbosePrint("Node {0} LeaderHeartbeatTimeout", NodeAddress.NodeAddressId);
-                    RunElectionTimer();
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.LeaderHeartbeatTimeout" });
-            }
-
-        }
-        /// <summary>
-        /// Time to become a candidate
-        /// </summary>
-        /// <param name="userToken"></param>
-        void ElectionTimeout(object userToken)
-        {
-            CandidateRequest req = null;
-            try
-            {
-                lock (lock_Operations)
-                {
-                    if (this.TM.Election_TimerId == 0)  //Timer was switched off and we don't need to run it again
-                        return;
-
-                    this.TM.Election_TimerId = 0;
-
-                    if (this.NodeState == eNodeState.Leader)
-                        return;
-                    VerbosePrint("Node {0} election timeout", NodeAddress.NodeAddressId);
-                    this.NodeState = eNodeState.Candidate;
-                    this.LeaderNodeAddress = null;
-                    VerbosePrint("Node {0} state is {1} _ElectionTimeout", NodeAddress.NodeAddressId, this.NodeState);
-                    //Voting for self
-                    //VotesQuantity = 1;
-                    VotesQuantity.Clear();
-                    //Increasing local term number
-                    NodeTerm++;
-                    req = new CandidateRequest()
-                    {
-                        TermId = this.NodeTerm,
-                        LastLogId = NodeStateLog.StateLogId,
-                        LastTermId = NodeStateLog.StateLogTerm
-                    };
-                    //send to all was here
-                    //Setting up new Election Timer
-                    RunElectionTimer();
-                }
-                this.network.SendToAll(eRaftSignalType.CandidateRequest, req, this.NodeAddress, entitySettings.EntityName);
-            }
-            catch (Exception ex)
-            {
-                Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.ElectionTimeout" });
-            }
-        }
-
-        void LeaderTimerElapse(object userToken)
-        {
-            try
-            {
-                //Sending signal to all (except self that it is a leader)
-                LeaderHeartbeat heartBeat = null;
-                lock (lock_Operations)
-                {
-                    heartBeat = new LeaderHeartbeat()
-                    {
-                        LeaderTerm = this.NodeTerm,
-                        StateLogLatestIndex = NodeStateLog.StateLogId,
-                        StateLogLatestTerm = NodeStateLog.StateLogTerm,
-                        LastStateLogCommittedIndex = this.NodeStateLog.LastCommittedIndex,
-                        LastStateLogCommittedIndexTerm = this.NodeStateLog.LastCommittedIndexTerm
-                    };
-                }
-                //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> leader_heartbeat");
-                this.network.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat, this.NodeAddress, entitySettings.EntityName, true);
-            }
-            catch (Exception ex)
-            {
-                Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.LeaderTimerElapse" });
-            }
-        }
+     
         /// <summary>
         /// 
         /// </summary>
@@ -622,12 +421,12 @@ namespace Raft
             this.NodeState = eNodeState.Follower;
             this.NodeStateLog.LeaderSynchronizationIsActive = false;
             //Removing timers
-            RemoveElectionTimer();
-            RemoveLeaderHeartbeatWaitingTimer();
-            RemoveLeaderTimer();
-            RemoveLeaderLogResendTimer();
+            this.loop.RemoveElectionTimer();
+            this.loop.RemoveLeaderHeartbeatWaitingTimer();
+            this.loop.RemoveLeaderTimer();
+            this.loop.RemoveLeaderLogResendTimer();
             //Starting Leaderheartbeat
-            RunLeaderHeartbeatWaitingTimer();
+            this.loop.RunLeaderHeartbeatWaitingTimer();
         }
 
         /// <summary>
@@ -760,8 +559,8 @@ namespace Raft
                                 vote.VoteType = VoteOfCandidate.eVoteType.VoteFor;
 
                                 //Restaring Election Timer
-                                this.RemoveElectionTimer();
-                                this.RunElectionTimer();
+                                this.loop.RemoveElectionTimer();
+                                this.loop.RunElectionTimer();
                             }
                         }
                         else
@@ -828,8 +627,8 @@ namespace Raft
                         VerbosePrint("Node {0} is Leader **********************************************",NodeAddress.NodeAddressId);
                         
                         //Stopping timers
-                        this.RemoveElectionTimer();
-                        this.RemoveLeaderHeartbeatWaitingTimer();
+                        this.loop.RemoveElectionTimer();
+                        this.loop.RemoveLeaderHeartbeatWaitingTimer();
                                                 
                         /*
                          * It's possible that we receive higher term from another leader 
@@ -837,7 +636,7 @@ namespace Raft
                          * other leader can be elected and it will definitely have higher Term, so every Leader node must be ready to it)
                          */                        
 
-                        this.RunLeaderTimer();
+                        this.loop.RunLeaderTimer();
                     }
                     //else
                     //{
@@ -851,27 +650,24 @@ namespace Raft
                     break;               
             }
         }
-
-        #endregion
-
         /// <summary>
         /// called from lock try..catch
         /// </summary>
         /// <param name="address"></param>
         /// <param name="data"></param>
-        void ParseStateLogRedirectRequest(NodeRaftAddress address, object data)
+        public void ParseStateLogRedirectRequest(NodeRaftAddress address, object data)
         {
             StateLogEntryRedirectRequest req = data as StateLogEntryRedirectRequest;
 
             if (this.NodeState != eNodeState.Leader)  //Just return
                 return;
-            
+
             this.NodeStateLog.AddStateLogEntryForDistribution(req.Data, req.ExternalID);//, redirectId);
-            ApplyLogEntry();
+            this.ApplyLogEntry();
 
             //Don't answer, committed value wil be delivered via standard channel           
         }
-      
+
         /// <summary>
         /// Leader receives accepted Log
         /// </summary>
@@ -889,7 +685,7 @@ namespace Raft
             if (res == eEntryAcceptanceResult.Committed)
             {
                 //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                RemoveLeaderLogResendTimer();
+                this.loop.RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat= new LeaderHeartbeat()
                 {
@@ -905,31 +701,13 @@ namespace Raft
                 ApplyLogEntry();
             }
         }
-        void LeaderLogResendTimerElapse(object userToken)
-        {
-            try
-            {
-                lock (lock_Operations)
-                {
-                    if (this.TM.LeaderLogResend_TimerId == 0)
-                        return;
-                    RemoveLeaderLogResendTimer();
-                    InLogEntrySend = false;
-                    ApplyLogEntry();
-                }
-                
-            }
-            catch (Exception ex)
-            {
-                Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.LeaderLogResendTimerElapse" });
-            }
-        }
-        bool InLogEntrySend = false;
+       
+        public bool InLogEntrySend = false;
         /// <summary>
         /// Is called from lock_operations
         /// Tries to apply new entry, must be called from lock
         /// </summary>
-        void ApplyLogEntry()
+        public void ApplyLogEntry()
         {
             if (InLogEntrySend)
                 return;
@@ -941,7 +719,7 @@ namespace Raft
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
 
             InLogEntrySend = true;                        
-            RunLeaderLogResendTimer();
+            this.loop.RunLeaderLogResendTimer();
             this.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.NodeAddress, entitySettings.EntityName);
         }
 
@@ -967,7 +745,7 @@ namespace Raft
 
                     if (this.NodeState == eNodeState.Leader)
                     {
-                        RemoveNoLeaderAddCommandTimer();
+                        this.loop.RemoveNoLeaderAddCommandTimer();
                         
                         while (NoLeaderCache.Count > 0)
                         {
@@ -982,12 +760,12 @@ namespace Raft
                     {
                         if (this.LeaderNodeAddress == null)
                         {
-                            res.AddResult = AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET;                            
-                            RunNoLeaderAddCommandTimer();
+                            res.AddResult = AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET;
+                            this.loop.RunNoLeaderAddCommandTimer();
                         }
                         else
                         {
-                            RemoveNoLeaderAddCommandTimer();
+                            this.loop.RemoveNoLeaderAddCommandTimer();
                             res.AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER;
                             res.LeaderAddress = this.LeaderNodeAddress;
                             
