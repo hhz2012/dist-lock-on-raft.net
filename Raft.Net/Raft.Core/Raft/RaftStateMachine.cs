@@ -79,9 +79,10 @@ namespace Raft
         /// Supplied via constructor. Will be called and supply
         /// </summary>
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
-        IActionHandler handler;
+        public IActionHandler handler;
         public string NodeName { get; set; }
-        private StateMachineTimerLoop loop = null;
+        public StateMachineTimerLoop loop = null;
+        public StateMachineLogHandler logHandler = null;
         /// <summary>
         /// 
         /// </summary>
@@ -101,6 +102,7 @@ namespace Raft
             //Starting time master
             this.TM = new TimeMaster(log);
             this.loop = new StateMachineTimerLoop(this.TM, settings, this);
+            this.logHandler = new StateMachineLogHandler(this);
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, workPath);
             //Adding AddLogEntryAsync cleanup
@@ -161,7 +163,7 @@ namespace Raft
                 IsRunning = true;
             }
             //Tries to executed not yet applied by business logic entries
-            Commited();
+            this.logHandler.Commited();
         }
 
         /// <summary>
@@ -224,10 +226,10 @@ namespace Raft
                             ParseStateLogEntryRequest(address, data);
                             break;
                         case eRaftSignalType.StateLogEntryAccepted:                                                       
-                            ParseStateLogEntryAccepted(address, data);
+                            this.logHandler.ParseStateLogEntryAccepted(address, data);
                             break;
                         case eRaftSignalType.StateLogRedirectRequest: //Not a leader node tries to add command
-                            ParseStateLogRedirectRequest(address, data);
+                            this.logHandler.ParseStateLogRedirectRequest(address, data);
                             break;
                     }
                 }
@@ -259,7 +261,7 @@ namespace Raft
                 this.network.SendTo(address, eRaftSignalType.StateLogEntrySuggestion, suggestion, this.NodeAddress, entitySettings.EntityName);
             }
         }
-        uint GetMajorityQuantity()
+        public uint GetMajorityQuantity()
         {
             return (uint)Math.Floor((double)NodesQuantityInTheCluster / 2) + 1;
         }
@@ -650,149 +652,16 @@ namespace Raft
                     break;               
             }
         }
-        /// <summary>
-        /// called from lock try..catch
-        /// </summary>
-        /// <param name="address"></param>
-        /// <param name="data"></param>
-        public void ParseStateLogRedirectRequest(NodeRaftAddress address, object data)
-        {
-            StateLogEntryRedirectRequest req = data as StateLogEntryRedirectRequest;
 
-            if (this.NodeState != eNodeState.Leader)  //Just return
-                return;
 
-            this.NodeStateLog.AddStateLogEntryForDistribution(req.Data, req.ExternalID);//, redirectId);
-            this.ApplyLogEntry();
-
-            //Don't answer, committed value wil be delivered via standard channel           
-        }
-
-        /// <summary>
-        /// Leader receives accepted Log
-        /// </summary>
-        /// <param name="address"></param>
-        /// <param name="data"></param>
-        void ParseStateLogEntryAccepted(NodeRaftAddress address, object data)
-        {
-            if (this.NodeState != eNodeState.Leader)
-                return;
-
-            StateLogEntryApplied applied = data as StateLogEntryApplied;
-
-            var res = this.NodeStateLog.EntryIsAccepted(address, GetMajorityQuantity(), applied);
-
-            if (res == eEntryAcceptanceResult.Committed)
-            {
-                //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                this.loop.RemoveLeaderLogResendTimer();
-                //Force heartbeat, to make followers to get faster info about commited elements
-                LeaderHeartbeat heartBeat= new LeaderHeartbeat()
-                {
-                    LeaderTerm = this.NodeTerm,
-                    StateLogLatestIndex = NodeStateLog.StateLogId,
-                    StateLogLatestTerm = NodeStateLog.StateLogTerm,
-                    LastStateLogCommittedIndex = this.NodeStateLog.LastCommittedIndex,
-                    LastStateLogCommittedIndexTerm = this.NodeStateLog.LastCommittedIndexTerm
-                };
-                this.network.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat, this.NodeAddress, entitySettings.EntityName, true);
-                //---------------------------------------
-                InLogEntrySend = false;
-                ApplyLogEntry();
-            }
-        }
        
         public bool InLogEntrySend = false;
-        /// <summary>
-        /// Is called from lock_operations
-        /// Tries to apply new entry, must be called from lock
-        /// </summary>
-        public void ApplyLogEntry()
-        {
-            if (InLogEntrySend)
-                return;
-            
-            var suggest = this.NodeStateLog.AddNextEntryToStateLogByLeader();
-            if (suggest == null)
-                return;
-
-            //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
-
-            InLogEntrySend = true;                        
-            this.loop.RunLeaderLogResendTimer();
-            this.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.NodeAddress, entitySettings.EntityName);
-        }
+ 
 
         //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
-        Queue<Tuple<byte[],byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+        public Queue<Tuple<byte[],byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
 
-        /// <summary>
-        /// Leader and followers via redirect. (later callback info for followers is needed)
-        /// </summary>
-        /// <param name="data"></param>
-        /// <param name="logEntryExternalId"></param>
-        /// <returns></returns>
-        public AddLogEntryResult AddLogEntry(byte[] iData, byte[] externalId = null)
-        {
-            AddLogEntryResult res = new AddLogEntryResult();
-
-            try
-            {                
-                lock (lock_Operations)
-                {
-                    if(iData != null)
-                        NoLeaderCache.Enqueue(new Tuple<byte[], byte[]>(iData, externalId));
-
-                    if (this.NodeState == eNodeState.Leader)
-                    {
-                        this.loop.RemoveNoLeaderAddCommandTimer();
-                        
-                        while (NoLeaderCache.Count > 0)
-                        {
-                            var nlc = NoLeaderCache.Dequeue();
-                            this.NodeStateLog.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
-                            ApplyLogEntry();
-                        }
-                        res.LeaderAddress = this.NodeAddress;
-                        res.AddResult = AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED;
-                    }
-                    else
-                    {
-                        if (this.LeaderNodeAddress == null)
-                        {
-                            res.AddResult = AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET;
-                            this.loop.RunNoLeaderAddCommandTimer();
-                        }
-                        else
-                        {
-                            this.loop.RemoveNoLeaderAddCommandTimer();
-                            res.AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER;
-                            res.LeaderAddress = this.LeaderNodeAddress;
-                            
-                            //Redirecting only in case if there is a leader                            
-                            while (NoLeaderCache.Count > 0)
-                            {
-                                var nlc = NoLeaderCache.Dequeue();
-                                this.network.SendTo(this.LeaderNodeAddress, eRaftSignalType.StateLogRedirectRequest,
-                                ( 
-                                    new StateLogEntryRedirectRequest
-                                    {
-                                        Data = nlc.Item1,
-                                        ExternalID = nlc.Item2
-                                    }
-                                ), this.NodeAddress, entitySettings.EntityName);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.AddLogEntryLeader" });
-                res.AddResult = AddLogEntryResult.eAddLogEntryResult.ERROR_OCCURED;
-            }
-            return res;
-        }
+       
 
         /// <summary>
         /// NodeIsInLatestState
@@ -815,75 +684,11 @@ namespace Raft
                     
             }
         }
-        int inCommit = 0;
+        public int inCommit = 0;
         /// <summary>
         /// callback function to handle action ,event response
         /// </summary>
-        internal void Commited()
-        {           
-            if (System.Threading.Interlocked.CompareExchange(ref inCommit, 1, 0) != 0)
-                return;
-            Task.Run(() =>
-            {                
-                StateLogEntry sle = null;               
-                while (true)
-                {
-                    lock (lock_Operations)
-                    {                       
-                        if (this.NodeStateLog.LastCommittedIndex == this.NodeStateLog.LastBusinessLogicCommittedIndex)
-                        {
-                            System.Threading.Interlocked.Exchange(ref inCommit, 0);
-                            return;
-                        }
-                        else
-                        {                            
-                            sle = this.NodeStateLog.GetCommitedEntryByIndex(this.NodeStateLog.LastBusinessLogicCommittedIndex + 1);
-                            if (sle == null)
-                            {
-                                System.Threading.Interlocked.Exchange(ref inCommit, 0);
-                                return;
-                            }
-                        }
-                    }
-                    
-                    try
-                    {
-                        if (this.handler.DoAction(entitySettings.EntityName, sle.Index,sle.Data))
-                        {
-                            //In case if business logic commit was successful
-                            lock (lock_Operations)
-                            {
-                                this.NodeStateLog.BusinessLogicIsApplied(sle.Index);
-                            }
-                            //Notifying Async AddLog
-                            if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
-                            {
-                                responseCrate.IsRespOk = true;
-                                responseCrate.res = sle.ExternalID;
-                                responseCrate.Set_MRE();
-                            }
-                        }
-                        else
-                        {
-                            System.Threading.Thread.Sleep(500);
-                            //repeating with the same id
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.Commited" });
-                        //Notifying Async AddLog
-                        if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
-                        {
-                            responseCrate.IsRespOk = false;
-                            responseCrate.res = sle.ExternalID;
-                            responseCrate.Set_MRE();
-                        }
-                    }
-                }
-            });            
-        }
-
+       
         public void Debug_PrintOutInMemory()
         {
             this.NodeStateLog.Debug_PrintOutInMemory();

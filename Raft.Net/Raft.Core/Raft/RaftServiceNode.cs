@@ -110,7 +110,7 @@ namespace Raft.Transport
             RaftStateMachine rn = null;
             var msgId = AsyncResponseHandler.GetMessageId();
             if (this.raftNodes.TryGetValue(entityName, out rn))
-                return rn.AddLogEntry(data,msgId);
+                return rn.logHandler.AddLogEntry(data,msgId);
             return new AddLogEntryResult { AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_FOUND_BY_NAME };
         }
                
@@ -129,7 +129,7 @@ namespace Raft.Transport
                 resp.TimeoutsMs = timeoutMs; //enable for amre
                 resp.Init_AMRE();
                 AsyncResponseHandler.df[msgIdStr] = resp;
-                var aler = rn.AddLogEntry(data,msgId);
+                var aler = rn.logHandler.AddLogEntry(data,msgId);
                 switch(aler.AddResult)
                 {
                     case AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED:

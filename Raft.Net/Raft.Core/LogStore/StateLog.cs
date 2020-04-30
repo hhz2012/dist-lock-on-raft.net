@@ -256,7 +256,7 @@ namespace Raft
                         return false;
                 }
                 if (populateFrom > 0)
-                    this.statemachine.Commited();
+                    this.statemachine.logHandler.Commited();
             }
             return true;
         }
@@ -571,7 +571,7 @@ namespace Raft
                     {
                         this.LastCommittedIndex = suggestion.StateLogEntry.Index;
                         this.LastCommittedIndexTerm = suggestion.StateLogEntry.Term;
-                        this.statemachine.Commited();
+                        this.statemachine.logHandler.Commited();
                     }
                 }
             }
@@ -661,7 +661,7 @@ namespace Raft
                     this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
 
                     if (lstCommited.Count > 0)
-                        this.statemachine.Commited();
+                        this.statemachine.logHandler.Commited();
                     return eEntryAcceptanceResult.Committed;
                 }
             }

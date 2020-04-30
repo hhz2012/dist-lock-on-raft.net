@@ -129,7 +129,7 @@ namespace Raft.Core.StateMachine
                         return false;
                 }
                 if (populateFrom > 0)
-                    this.rn.Commited();
+                    this.rn.logHandler.Commited();
             }
             return true;
         }
@@ -306,7 +306,7 @@ namespace Raft.Core.StateMachine
                         this.LastCommittedIndexTerm = suggestion.StateLogEntry.Term;
 
                         //this.rn.Commited(suggestion.StateLogEntry.Index);                      
-                        this.rn.Commited();
+                        this.rn.logHandler.Commited();
                     }
                 }
             }
@@ -384,7 +384,7 @@ namespace Raft.Core.StateMachine
                 }
                 this.LastCommittedIndex = applied.StateLogEntryId;
                 this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
-                this.rn.Commited();
+                this.rn.logHandler.Commited();
                 return eEntryAcceptanceResult.Committed;
             }
 
