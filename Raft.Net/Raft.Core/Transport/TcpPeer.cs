@@ -34,7 +34,7 @@ namespace Raft.Transport
         {
             _nettyclient = client;
             trn = rn;
-            trn.GetNode().TM.FireEventEach(10000, (o) =>
+            trn.GetNode().timerLoop.TM.FireEventEach(10000, (o) =>
             {
             }, null, true);
         }
@@ -117,7 +117,7 @@ namespace Raft.Transport
                                 var node = trn.GetNode();
                                 if (node != null)
                                 {
-                                    node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.orginalObject);
+                                    node.HandleRaftSignal(this.na, msg.RaftSignalType, msg.orginalObject);
                                 }
                                 else
                                 {

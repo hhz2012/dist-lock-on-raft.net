@@ -30,7 +30,7 @@ namespace Raft.Core.Raft
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
 
             this.stateMachine.InLogEntrySend = true;
-            this.stateMachine.loop.RunLeaderLogResendTimer();
+            this.stateMachine.timerLoop.RunLeaderLogResendTimer();
             this.stateMachine.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName);
         }
         /// <summary>
@@ -52,7 +52,7 @@ namespace Raft.Core.Raft
 
                     if (this.stateMachine.NodeState == eNodeState.Leader)
                     {
-                        this.stateMachine.loop.RemoveNoLeaderAddCommandTimer();
+                        this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
 
                         while (this.stateMachine.NoLeaderCache.Count > 0)
                         {
@@ -68,11 +68,11 @@ namespace Raft.Core.Raft
                         if (this.stateMachine.LeaderNodeAddress == null)
                         {
                             res.AddResult = AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET;
-                            this.stateMachine.loop.RunNoLeaderAddCommandTimer();
+                            this.stateMachine.timerLoop.RunNoLeaderAddCommandTimer();
                         }
                         else
                         {
-                            this.stateMachine.loop.RemoveNoLeaderAddCommandTimer();
+                            this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
                             res.AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER;
                             res.LeaderAddress = this.stateMachine.LeaderNodeAddress;
 
@@ -181,7 +181,7 @@ namespace Raft.Core.Raft
             if (res == eEntryAcceptanceResult.Committed)
             {
                 //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                this.stateMachine.loop.RemoveLeaderLogResendTimer();
+                this.stateMachine.timerLoop.RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat = new LeaderHeartbeat()
                 {

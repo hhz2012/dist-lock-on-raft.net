@@ -21,20 +21,14 @@ namespace Raft.Transport
         internal RaftStateMachine raftNode = null;
         internal TcpPeerNetwork peerNetwork = null;
         internal NodeSettings NodeSettings = null;
-        internal string nodeName;
-        public string NodeName
-        {
-            get
-            {
-                return this.nodeName;
-            }
-        }
+        public string NodeName { get; set; }
+        
         public RaftServiceNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
                 nodeSettings = new NodeSettings();
             this.NodeSettings = nodeSettings;
-            this.nodeName = nodeName;
+            this.NodeName = nodeName;
             this.log = log;
             this.port = port;
          
@@ -51,7 +45,6 @@ namespace Raft.Transport
 
             var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), dbreezePath, this.peerNetwork, this.log, handler);
              
-            rn.Verbose = re_settings.VerboseRaft;       
             rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
             rn.NodeAddress.NodeAddressId = port; //for debug/emulation purposes
 
@@ -89,7 +82,7 @@ namespace Raft.Transport
         {
             await peerNetwork.Handshake();
         }
-        public bool NodeIsInLatestState(string entityName = "default")
+        public bool NodeIsInLatestState()
         {
             RaftStateMachine rn = this.raftNode;
             return rn.NodeIsInLatestState;

@@ -6,7 +6,7 @@ namespace Raft.Core.Raft
 {
     public class StateMachineTimerLoop
     {
-        TimeMaster TM = null;
+        public TimeMaster TM = null;
         Random rnd = new Random();
         RaftEntitySettings entitySettings;
         RaftStateMachine stateMachine = null;
@@ -243,5 +243,33 @@ namespace Raft.Core.Raft
         }
         #endregion
         #endregion
+
+        public void StopLeaderTimers()
+        {
+            //Removing timers
+            this.RemoveElectionTimer();
+            this.RemoveLeaderHeartbeatWaitingTimer();
+            this.RemoveLeaderTimer();
+            this.RemoveLeaderLogResendTimer();
+            //Starting Leaderheartbeat
+            this.RunLeaderHeartbeatWaitingTimer();
+        }
+        public void Stop()
+        {
+            this.RemoveElectionTimer();
+            this.RemoveLeaderHeartbeatWaitingTimer();
+            this.RemoveLeaderTimer();
+            this.RemoveNoLeaderAddCommandTimer();
+        }
+        public void StartClearup()
+        {
+            this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);
+        }
+        public void Dispose()
+        {
+            if (this.TM != null)
+                this.TM.Dispose();
+
+        }
     }
 }

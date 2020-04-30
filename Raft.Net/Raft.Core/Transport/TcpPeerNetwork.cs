@@ -135,7 +135,7 @@ namespace Raft.Transport
         public async Task Handshake()        
         {
             await HandshakeTo(trn.NodeSettings.TcpClusterEndPoints);
-            trn.GetNode().TM.FireEventEach(3000, RetestConnections, null, false);
+            trn.GetNode().timerLoop.TM.FireEventEach(3000, RetestConnections, null, false);
         }
         public bool IsMe(PeerEndPoint endPoint)
         {
@@ -162,7 +162,7 @@ namespace Raft.Transport
                      });
                     if (GlobalConfig.DebugNetwork)
                     {
-                        var localname = this.trn.nodeName;
+                        var localname = this.trn.NodeName;
                         Console.WriteLine($" send handshake from {localname} to {el.Port}");
                     }
                 }

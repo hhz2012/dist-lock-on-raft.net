@@ -4,11 +4,7 @@
 */
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DBreeze;
-using DBreeze.Utils;
+using Raft.Core;
 using Raft.Core.Handler;
 using Raft.Core.Raft;
 using Raft.Core.StateMachine;
@@ -20,32 +16,35 @@ namespace Raft
     /// </summary>
     public class RaftStateMachine :IRaftStateMachine, IDisposable 
     {
-        /// <summary>
-        /// Last term this node has voted
-        /// </summary>
-        ulong LastVotedTermId = 0;
+       
+        public readonly IWarningLog Log = null;
+        public object lock_Operations = new object();
         /// <summary>
         /// Communication interface
         /// </summary>
         public IPeerConnector network = null;
         /// <summary>
-        /// Node settings
+        /// Node StateLog
         /// </summary>
-        internal RaftEntitySettings entitySettings = null;
-        public readonly IWarningLog Log = null;
-        public object lock_Operations = new object();        
-        internal TimeMaster TM = null;
-        public eNodeState NodeState = eNodeState.Follower;
-        public HashSet<string> VotesQuantity = new HashSet<string>();
+        public IStateLog NodeStateLog = null;
+        public StateMachineTimerLoop timerLoop = null;
+        public StateMachineLogHandler logHandler = null;
+
+        /// <summary>
+        /// Supplied via constructor. Will be called and supply
+        /// </summary>
+        //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
+        public IActionHandler handler;
+
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
         /// <summary>
         /// Current node Term
         /// </summary>
         internal ulong NodeTerm = 0;
         /// <summary>
-        /// Node StateLog
+        /// Last term this node has voted
         /// </summary>
-        public IStateLog NodeStateLog = null;
+        ulong LastVotedTermId = 0;
         /// <summary>
         /// Address of the current node
         /// </summary>
@@ -59,25 +58,27 @@ namespace Raft
         /// </summary>
         public DateTime LeaderHeartbeatArrivalTime = DateTime.MinValue;
         /// <summary>
-        /// If makes Debug outputs
+        /// Latest heartbeat from leader, can be null on start
         /// </summary>
-        public bool Verbose = false;
+        internal LeaderHeartbeat LeaderHeartbeat = null;
+        public HashSet<string> VotesQuantity = new HashSet<string>();
+        //state 
+        public eNodeState NodeState = eNodeState.Follower;
         /// <summary>
         /// Is node started 
         /// </summary>
         public bool IsRunning = false;
         /// <summary>
-        /// Latest heartbeat from leader, can be null on start
+        /// Node settings
         /// </summary>
-        internal LeaderHeartbeat LeaderHeartbeat = null;
-        /// <summary>
-        /// Supplied via constructor. Will be called and supply
-        /// </summary>
-        //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
-        public IActionHandler handler;
+        internal RaftEntitySettings entitySettings = null;
         public string NodeName { get; set; }
-        public StateMachineTimerLoop loop = null;
-        public StateMachineLogHandler logHandler = null;
+
+        public int inCommit = 0;
+        public bool InLogEntrySend = false;
+        //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
+        public Queue<Tuple<byte[], byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+
         /// <summary>
         /// 
         /// </summary>
@@ -95,49 +96,16 @@ namespace Raft
             entitySettings = settings;         
            
             //Starting time master
-            this.TM = new TimeMaster(log);
-            this.loop = new StateMachineTimerLoop(this.TM, settings, this);
+            var TM = new TimeMaster(log);
+            this.timerLoop = new StateMachineTimerLoop(TM, settings, this);
             this.logHandler = new StateMachineLogHandler(this);
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, workPath);
             //Adding AddLogEntryAsync cleanup
-            this.TM.FireEventEach(10000, AsyncResponseHandler.ResponseCrateCleanUp, null, false);
+            this.timerLoop.StartClearup();
+            
         }
         int disposed = 0;
-        /// <summary>
-        /// 
-        /// </summary>
-        public void Dispose()
-        {
-            if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
-                return;
-            this.NodeStop();
-            if (this.TM != null)
-                this.TM.Dispose();
-
-            this.NodeStateLog.Dispose();
-            this.NodeStateLog = null;
-        }
-        /// <summary>
-        /// Is node a leader
-        /// </summary>
-        public bool IsLeader
-        {
-            get
-            {
-                return this.NodeState == eNodeState.Leader;
-            }
-        }
-    /// <summary>
-    /// We need this value to calculate majority while leader election
-    /// </summary>
-    public void SetNodesQuantityInTheCluster(uint nodesQuantityInTheCluster)
-        {
-            lock (lock_Operations)
-            {
-                NodesQuantityInTheCluster = nodesQuantityInTheCluster;
-            }
-        }
         /// <summary>
         /// Starts the node
         /// </summary>
@@ -150,7 +118,6 @@ namespace Raft
                     VerbosePrint("Node {0} ALREADY RUNNING", NodeAddress.NodeAddressId);
                     return;
                 }                
-
                 VerbosePrint("Node {0} has started.", NodeAddress.NodeAddressId);
                 //In the beginning node is Follower
                 SetNodeFollower();
@@ -159,18 +126,6 @@ namespace Raft
             //Tries to executed not yet applied by business logic entries
             this.logHandler.Commited();
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="format"></param>
-        /// <param name="args"></param>
-        internal void VerbosePrint(string format,params object[] args)
-        {      
-            if(Verbose)
-                Console.WriteLine( String.Format("{0}> {1}",DateTime.Now.ToString("mm:ss.ms"),String.Format(format,args)));
-        }
-
         /// <summary>
         /// Stops the node
         /// </summary>
@@ -178,10 +133,7 @@ namespace Raft
         {
             lock (lock_Operations)
             {
-                this.loop.RemoveElectionTimer();
-                this.loop.RemoveLeaderHeartbeatWaitingTimer();
-                this.loop.RemoveLeaderTimer();
-                this.loop.RemoveNoLeaderAddCommandTimer();
+                this.timerLoop.Stop();
                 this.NodeState = eNodeState.Follower;
                 this.NodeStateLog.LeaderSynchronizationIsActive = false;
                 //this.NodeStateLog.FlushSleCache();
@@ -195,7 +147,7 @@ namespace Raft
         /// <param name="address">Address of the node who sent the signal</param>
         /// <param name="signalType"></param>
         /// <param name="data"></param>
-        public void IncomingSignalHandler(NodeRaftAddress address, eRaftSignalType signalType, object data)
+        public void HandleRaftSignal(NodeRaftAddress address, eRaftSignalType signalType, object data)
         {
             try
             {
@@ -231,9 +183,7 @@ namespace Raft
             {
                 Log.Log(new WarningLogEntry() { Exception = ex, Method = "Raft.RaftNode.IncomingSignalHandler" });
             }
-
         }
-       
         /// <summary>
         /// Only for Leader.
         /// Follower requests new Log Entry Index from the Leader and Leader answers to the Follower
@@ -248,16 +198,12 @@ namespace Raft
             //Getting suggestion
             var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestionFromRequested(req);
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
-
             if (suggestion != null)
             {
                 this.network.SendTo(address, eRaftSignalType.StateLogEntrySuggestion, suggestion, this.NodeAddress, entitySettings.EntityName);
             }
         }
-        public uint GetMajorityQuantity()
-        {
-            return (uint)Math.Floor((double)NodesQuantityInTheCluster / 2) + 1;
-        }
+      
         /// <summary>
         /// Only for Follower
         ///  Is called from tryCatch and in lock
@@ -315,22 +261,6 @@ namespace Raft
             };
             this.network.SendTo(address, eRaftSignalType.StateLogEntryAccepted, applied, this.NodeAddress, entitySettings.EntityName);          
         }
-        bool IsLeaderSynchroTimerActive
-        {
-            get
-            {
-                if (this.NodeStateLog.LeaderSynchronizationIsActive)
-                {
-                    if (DateTime.UtcNow.Subtract(this.NodeStateLog.LeaderSynchronizationRequestWasSent).TotalMinutes > this.NodeStateLog.LeaderSynchronizationTimeOut)
-                    {
-                        //Time to repeat request
-                    }
-                    else
-                        return true; //We are already in syncrhonization mode with the Leader
-                }
-                return false;
-            }
-        }
 
         /// <summary>
         /// Is called from tryCatch and lock.
@@ -343,10 +273,8 @@ namespace Raft
             {
                 if (IsLeaderSynchroTimerActive)
                     return;
-                
                 NodeStateLog.ClearStateLogStartingFromCommitted();
             }
-
             NodeStateLog.LeaderSynchronizationIsActive = true;
             NodeStateLog.LeaderSynchronizationRequestWasSent = DateTime.UtcNow;
 
@@ -412,13 +340,7 @@ namespace Raft
                 VerbosePrint("Node {0} state is {1} of {2}", NodeAddress.NodeAddressId, this.NodeState, this.LeaderNodeAddress?.NodeAddressId);
             this.NodeState = eNodeState.Follower;
             this.NodeStateLog.LeaderSynchronizationIsActive = false;
-            //Removing timers
-            this.loop.RemoveElectionTimer();
-            this.loop.RemoveLeaderHeartbeatWaitingTimer();
-            this.loop.RemoveLeaderTimer();
-            this.loop.RemoveLeaderLogResendTimer();
-            //Starting Leaderheartbeat
-            this.loop.RunLeaderHeartbeatWaitingTimer();
+            this.timerLoop.StopLeaderTimers();
         }
 
         /// <summary>
@@ -551,8 +473,8 @@ namespace Raft
                                 vote.VoteType = VoteOfCandidate.eVoteType.VoteFor;
 
                                 //Restaring Election Timer
-                                this.loop.RemoveElectionTimer();
-                                this.loop.RunElectionTimer();
+                                this.timerLoop.RemoveElectionTimer();
+                                this.timerLoop.RunElectionTimer();
                             }
                         }
                         else
@@ -619,8 +541,8 @@ namespace Raft
                         VerbosePrint("Node {0} is Leader **********************************************",NodeAddress.NodeAddressId);
                         
                         //Stopping timers
-                        this.loop.RemoveElectionTimer();
-                        this.loop.RemoveLeaderHeartbeatWaitingTimer();
+                        this.timerLoop.RemoveElectionTimer();
+                        this.timerLoop.RemoveLeaderHeartbeatWaitingTimer();
                                                 
                         /*
                          * It's possible that we receive higher term from another leader 
@@ -628,7 +550,7 @@ namespace Raft
                          * other leader can be elected and it will definitely have higher Term, so every Leader node must be ready to it)
                          */                        
 
-                        this.loop.RunLeaderTimer();
+                        this.timerLoop.RunLeaderTimer();
                     }
                     //else
                     //{
@@ -642,9 +564,7 @@ namespace Raft
                     break;               
             }
         }
-        public bool InLogEntrySend = false;
-        //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
-        public Queue<Tuple<byte[],byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+
         /// <summary>
         /// NodeIsInLatestState
         /// </summary>
@@ -666,14 +586,75 @@ namespace Raft
                     
             }
         }
-        public int inCommit = 0;
+        bool IsLeaderSynchroTimerActive
+        {
+            get
+            {
+                if (this.NodeStateLog.LeaderSynchronizationIsActive)
+                {
+                    if (DateTime.UtcNow.Subtract(this.NodeStateLog.LeaderSynchronizationRequestWasSent).TotalMinutes > this.NodeStateLog.LeaderSynchronizationTimeOut)
+                    {
+                        //Time to repeat request
+                    }
+                    else
+                        return true; //We are already in syncrhonization mode with the Leader
+                }
+                return false;
+            }
+        }
+        /// <summary>
+        /// Is node a leader
+        /// </summary>
+        public bool IsLeader
+        {
+            get
+            {
+                return this.NodeState == eNodeState.Leader;
+            }
+        }
+        /// <summary>
+        /// We need this value to calculate majority while leader election
+        /// </summary>
+        public void SetNodesQuantityInTheCluster(uint nodesQuantityInTheCluster)
+        {
+            lock (lock_Operations)
+            {
+                NodesQuantityInTheCluster = nodesQuantityInTheCluster;
+            }
+        }
+        public uint GetMajorityQuantity()
+        {
+            return (uint)Math.Floor((double)NodesQuantityInTheCluster / 2) + 1;
+        }
         /// <summary>
         /// callback function to handle action ,event response
         /// </summary>
-       
+
         public void Debug_PrintOutInMemory()
         {
             this.NodeStateLog.Debug_PrintOutInMemory();
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Dispose()
+        {
+            if (System.Threading.Interlocked.CompareExchange(ref disposed, 1, 0) != 0)
+                return;
+            this.NodeStop();
+            this.timerLoop.Dispose();
+            this.NodeStateLog.Dispose();
+            this.NodeStateLog = null;
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="format"></param>
+        /// <param name="args"></param>
+        internal void VerbosePrint(string format, params object[] args)
+        {
+            if (GlobalConfig.Verbose)
+                Console.WriteLine(String.Format("{0}> {1}", DateTime.Now.ToString("mm:ss.ms"), String.Format(format, args)));
         }
     }//eoc
 
