@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Async\AsyncManualResetEvent.cs" />
     <Compile Remove="Transport\SPROT1.cs" />
     <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
     <Compile Remove="Utils\SDictAutoIdentityLong.cs" />
@@ -15,13 +16,13 @@
   <ItemGroup>
     <None Remove="!!!Notes.txt" />
     <None Remove="!!!TODO.txt" />
-    <None Remove="Log\!!!DBreezeScheme.txt" />
+    <None Remove="LogStore\!!!DBreezeScheme.txt" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="!!!Notes.txt" />
-    <Content Include="!!!TODO.txt" />
-    <Content Include="Log\Entry\!!!DBreezeScheme.txt" />
+    <Content Include="Document\!!!Notes.txt" />
+    <Content Include="Document\!!!TODO.txt" />
+    <Content Include="LogStore\Entry\!!!DBreezeScheme.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Log\Entry\AddLogEntryResult.cs">
+    <Compile Update="LogStore\Entry\AddLogEntryResult.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

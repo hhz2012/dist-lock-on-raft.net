@@ -17,6 +17,27 @@ namespace Raft
     /// </summary>
     public class TimeMaster:IDisposable
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        public ulong Election_TimerId = 0;
+        /// <summary>
+        /// Stopping this timer only in case if node becomes a leader, and starting when loosing leadership.       
+        /// </summary>
+        public ulong LeaderHeartbeat_TimerId = 0;
+        /// <summary>
+        /// 
+        /// </summary>
+        public ulong NoLeaderAddCommand_TimerId = 0;
+        /// <summary>
+        /// 
+        /// </summary>
+        public ulong Leader_TimerId = 0;
+        /// <summary>
+        /// 
+        /// </summary>
+        public ulong LeaderLogResend_TimerId = 0;
+
         System.Timers.Timer tmr = new System.Timers.Timer();
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         ulong eventId = 0;
