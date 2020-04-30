@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="HelloServerHandler.cs" />
+    <Compile Remove="MessageBody.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LockService\LockService.csproj" />
     <ProjectReference Include="..\Raft.Net\LockQueue\LockQueue.csproj" />
     <ProjectReference Include="..\Raft.Net\Raft.Core\Raft.Core.csproj" />

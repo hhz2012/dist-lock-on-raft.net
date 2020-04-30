@@ -1,4 +1,4 @@
-﻿using Coldairarrow.DotNettyRPC;
+﻿
 using DotNetty.Codecs;
 using DotNetty.Codecs.Http;
 using DotNetty.Transport.Bootstrapping;
@@ -67,18 +67,18 @@ namespace LockService
                             RaftEntitiesSettings =  re_settings 
                         },
                         PathRoot + nodeName,
-                        null,
+                        new LockClusterManagerHandler(),
                         Port,
                         nodeName,
-                        10000,
-                        null,
+                        10000+i,
+                        new HelloServerHandler(this),
                         log
                         );
                     this.Nodes.Add(trn);
-
                 }
                 nodes.Add(trn);
                 trn.Start();
+                await trn.StartHttp();
                 System.Threading.Thread.Sleep((new Random()).Next(30, 350));
             }
             for (int i = 0; i < num; i++)
@@ -121,55 +121,6 @@ namespace LockService
     
         
     }
-    public class LockRequestHandler : ChannelHandlerAdapter //管道处理基类，较常用
-    {
-        LockClusterManager manager = null;
-        public LockRequestHandler(LockClusterManager manager)
-        {
-            this.manager = manager;
-        }
+   
 
-
-        public override async void ChannelRead(IChannelHandlerContext context, object message)
-        {
-            LockOper op = new LockOper()
-            {
-                Key = "key",
-                Oper = "lock",
-                Session = "session1"
-            };
-            await manager.TestWorkOperation(op);
-
-        }
-        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
-
-        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
-        {
-            Console.WriteLine("Exception: " + exception);
-            context.CloseAsync();
-        }
-    }
-    public interface IHello
-    {
-        string SayHello(string msg);
-    }
-
-    public class Hello : IHello
-    {
-        public  string SayHello(string msg)
-        {
-            LockOper op = new LockOper()
-            {
-                Key = "key",
-                Oper = "lock",
-                Session = "session1"
-            };
-            var val = "val";
-            //var val=Task.Run(async () =>
-            //{
-            //  return   await LockClusterManager.manager.TestWorkOperation(op).ConfigureAwait(false);
-            //}).ConfigureAwait(false).GetAwaiter().GetResult();
-            return val;
-        }
-    }
 }
