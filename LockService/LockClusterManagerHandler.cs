@@ -7,33 +7,21 @@ using System.Text;
 
 namespace Raft.Core.RaftEmulator
 {
-    public class LockClusterManagerHandler : ActionHandlerBase
+    public class LockClusterManagerHandler : IActionHandler
     {
-        LockSeriveControlNode node = null;
-        public LockClusterManagerHandler(LockSeriveControlNode node):base()
-        {
-            this.node = node;
-        }
         
-        public override bool DoAction(string entityName, ulong index, byte[] data)
+        public LockClusterManagerHandler( )
         {
-            //Console.WriteLine($"wow committed {entityName}/{index}; DataLen: {(data == null ? -1 : data.Length)}");
-            //handle shards operation
-            try
-            {
-                string str = System.Text.Encoding.Default.GetString(data);
-                string json = str;
-                ClusterCommand command = Newtonsoft.Json.JsonConvert.DeserializeObject<ClusterCommand>(json);
-                //Console.WriteLine($"command received:{command.Command},{command.Target}");
-                if (command.Command== "CreateShard")
-                {
-                    this.node.JoinShard(command).ConfigureAwait(false).GetAwaiter().GetResult();
-                }
-            }
-            catch (Exception ex)
-            {
+            
+        }
 
-            }
+        public bool DoAction(string entityName, ulong index, byte[] data)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool SetNode(RaftStateMachine raftNode)
+        {
             return true;
         }
     }

@@ -14,13 +14,12 @@ using Raft.Core.Handler;
 
 namespace Raft.Transport
 {
-    public class RaftNode: IDisposable
+    public class RaftServiceNode: IDisposable
     {       
         internal IWarningLog log = null;
         internal int port = 0;
         internal Dictionary<string, RaftStateMachine> raftNodes = new Dictionary<string, RaftStateMachine>();
         internal TcpPeerNetwork peerNetwork = null;
-        internal DBreezeEngine dbEngine;
         internal NodeSettings NodeSettings = null;
         internal string nodeName;
         public string NodeName
@@ -30,7 +29,7 @@ namespace Raft.Transport
                 return this.nodeName;
             }
         }
-        public RaftNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
+        public RaftServiceNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
                 nodeSettings = new NodeSettings();
@@ -44,13 +43,10 @@ namespace Raft.Transport
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
             {
-                this.NodeSettings.RaftEntitiesSettings = new List<RaftEntitySettings>();
+                this.NodeSettings.RaftEntitiesSettings = new RaftEntitySettings();
             }
+            var re_settings = this.NodeSettings.RaftEntitiesSettings;
 
-            if(this.NodeSettings.RaftEntitiesSettings.Where(r=>r.EntityName.ToLower() == "default").Count()<1)
-                this.NodeSettings.RaftEntitiesSettings.Add(new RaftEntitySettings());
-            foreach (var re_settings in this.NodeSettings.RaftEntitiesSettings)
-            {
                 if (String.IsNullOrEmpty(re_settings.EntityName))
                     throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
@@ -67,7 +63,7 @@ namespace Raft.Transport
                 rn.NodeName = this.NodeName;
                 this.raftNodes[re_settings.EntityName] = rn;
                 rn.NodeStart();
-            }
+            
         }
 
         /// <summary>

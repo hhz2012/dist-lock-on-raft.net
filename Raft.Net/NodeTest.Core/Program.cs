@@ -26,37 +26,7 @@ namespace NodeTest.Core
             }
 
 
-            cluster.TestSendData(
-                new ClusterCommand()
-                {
-                    Command = "CreateShard",
-                    Target = "",
-                    Targets = new List<string>()
-                     {
-                          "entity1",
-                          "entity2",
-                          "entity3"
-                     },
-                    IpAddress = new List<EndPoint>()
-                     {
-                          new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=12001
-                          },
-                           new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=12002
-                          },
-                            new EndPoint()
-                          {
-                               ipAddress="127.0.0.1",
-                               port=12003
-                          }
-                     }
-                }
-                );
+          
 
             while (true)
             {

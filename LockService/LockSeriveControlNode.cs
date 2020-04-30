@@ -11,7 +11,7 @@ namespace LockService
 {
     public class LockSeriveControlNode
     {
-        RaftNode trn = null;
+        RaftServiceNode trn = null;
         string nodeName = null;
         IWarningLog logger = null;
         LockTable table = new LockTable();
@@ -20,7 +20,7 @@ namespace LockService
             
             this.nodeName = nodeName;
             this.logger = logger;
-            trn = new RaftNode(setting,
+            trn = new RaftServiceNode(setting,
                                  localPath,              
                                  new LockClusterManagerHandler(this),
                                  Port,
@@ -35,15 +35,15 @@ namespace LockService
         {
             await trn.StartConnect();
         }
-        public RaftNode InnerNode
+        public RaftServiceNode InnerNode
         {
             get
             {
                 return this.trn;
             }
         }
-        private RaftNode wrk = null;
-        public RaftNode WorkNode
+        private RaftServiceNode wrk = null;
+        public RaftServiceNode WorkNode
         {
             get
             {
@@ -93,11 +93,11 @@ namespace LockService
                     eps.Add(new PeerEndPoint() { Host = "127.0.0.1", Port = ipAddress[index] });
             int Port = eps[order].Port;
             var nodeName = this.nodeName + "_worker";
-            this.wrk=new RaftNode(
+            this.wrk=new RaftServiceNode(
                                    new NodeSettings()
                                    {
                                        TcpClusterEndPoints = eps,
-                                       RaftEntitiesSettings = new List<RaftEntitySettings>() { re_settings }
+                                       RaftEntitiesSettings = re_settings
                                    },
                                   LockClusterManager.PathRoot+nodeName,
                                   new WorkerHandler(this),

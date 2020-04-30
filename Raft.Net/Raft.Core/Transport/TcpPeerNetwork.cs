@@ -24,9 +24,9 @@ namespace Raft.Transport
     {      
         ReaderWriterLockSlim _sync = new ReaderWriterLockSlim();
         Dictionary<string,TcpPeer> Peers = new Dictionary<string, TcpPeer>();     //Key - NodeUID    
-        internal RaftNode trn = null;
+        internal RaftServiceNode trn = null;
         TcpPeerListener listener = null;
-        public TcpPeerNetwork(RaftNode trn)
+        public TcpPeerNetwork(RaftServiceNode trn)
         {
             this.trn = trn;
             

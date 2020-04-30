@@ -13,7 +13,7 @@ namespace Raft
         /// <summary>
         /// List of Raft Entities that will use one TCP Transport to get the same state for all entites
         /// </summary>
-        public List<RaftEntitySettings> RaftEntitiesSettings { get; set; } = new List<RaftEntitySettings>();
+        public RaftEntitySettings RaftEntitiesSettings { get; set; } = new RaftEntitySettings();
         /// <summary>
         /// Quantity of Cluster EndPoints is used to get majority of servers to Commit Entity
         /// </summary>

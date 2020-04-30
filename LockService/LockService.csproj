@@ -5,14 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="RaftEmulator\ClusterManagerEmulator.cs" />
-    <Compile Remove="RaftEmulator\IEmulatedNode.cs" />
-    <Compile Remove="RaftEmulator\ShardEmulator.cs" />
-    <Compile Remove="RaftEmulator\UdpEmulator.cs" />
+    <Compile Remove="RaftEmulator\**" />
+    <EmbeddedResource Remove="RaftEmulator\**" />
+    <None Remove="RaftEmulator\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="RaftEmulator\UdpEmulator.cs" />
+    <Compile Remove="ClusterCommand.cs" />
+    <Compile Remove="ConfigurationBuilder.cs" />
+    <Compile Remove="LockSeriveControlNode.cs" />
+    <Compile Remove="WorkerHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>
