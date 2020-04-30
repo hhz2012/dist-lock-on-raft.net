@@ -18,7 +18,7 @@ namespace Raft.Transport
     {       
         internal IWarningLog log = null;
         internal int port = 0;
-        internal Dictionary<string, RaftStateMachine> raftNodes = new Dictionary<string, RaftStateMachine>();
+        internal RaftStateMachine raftNode = null;
         internal TcpPeerNetwork peerNetwork = null;
         internal NodeSettings NodeSettings = null;
         internal string nodeName;
@@ -37,8 +37,7 @@ namespace Raft.Transport
             this.nodeName = nodeName;
             this.log = log;
             this.port = port;
-
-          
+         
             peerNetwork = new TcpPeerNetwork(this);
             //bool firstNode = true;
             if (this.NodeSettings.RaftEntitiesSettings == null)
@@ -47,22 +46,19 @@ namespace Raft.Transport
             }
             var re_settings = this.NodeSettings.RaftEntitiesSettings;
 
-                if (String.IsNullOrEmpty(re_settings.EntityName))
-                    throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
+            if (String.IsNullOrEmpty(re_settings.EntityName))
+                throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
 
-                if (this.raftNodes.ContainsKey(re_settings.EntityName))
-                    throw new Exception("Raft.Net: entities must have unique names. Change RaftNodeSettings.EntityName.");
-
-                var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), dbreezePath, this.peerNetwork, this.log, handler);
+            var rn = new RaftStateMachine(re_settings ?? new RaftEntitySettings(), dbreezePath, this.peerNetwork, this.log, handler);
              
-                rn.Verbose = re_settings.VerboseRaft;       
-                rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
-                rn.NodeAddress.NodeAddressId = port; //for debug/emulation purposes
+            rn.Verbose = re_settings.VerboseRaft;       
+            rn.SetNodesQuantityInTheCluster((uint)this.NodeSettings.TcpClusterEndPoints.Count);     
+            rn.NodeAddress.NodeAddressId = port; //for debug/emulation purposes
 
-                rn.NodeAddress.NodeUId = Guid.NewGuid().ToByteArray().Substring(8, 8).To_Int64_BigEndian();
-                rn.NodeName = this.NodeName;
-                this.raftNodes[re_settings.EntityName] = rn;
-                rn.NodeStart();
+            rn.NodeAddress.NodeUId = Guid.NewGuid().ToByteArray().Substring(8, 8).To_Int64_BigEndian();
+            rn.NodeName = this.NodeName;
+            this.raftNode = rn;
+            rn.NodeStart();
             
         }
 
@@ -73,11 +69,8 @@ namespace Raft.Transport
         /// <returns></returns>
         public bool IsLeader(string entityName = "default")
         {
-            if(this.raftNodes.TryGetValue(entityName, out var rn))
-            {
-                return rn.IsLeader;
-            }
-            return false;
+            return this.raftNode.IsLeader;
+            
         }
         public void Start()
         {
@@ -85,14 +78,12 @@ namespace Raft.Transport
         }
         internal void PeerIsDisconnected(string endpointsid)
         {
-            foreach(var rn in this.raftNodes)
-                rn.Value.PeerIsDisconnected(endpointsid);
+           this.raftNode.PeerIsDisconnected(endpointsid);
         }
-        public RaftStateMachine GetNodeByEntityName(string entityName)
+        public RaftStateMachine GetNode()
         {
-            RaftStateMachine rn = null;
-            raftNodes.TryGetValue(entityName, out rn);
-            return rn;
+            return this.raftNode;
+            
         }
         public async Task StartConnect()
         {
@@ -100,27 +91,24 @@ namespace Raft.Transport
         }
         public bool NodeIsInLatestState(string entityName = "default")
         {
-            RaftStateMachine rn = null;
-            if (this.raftNodes.TryGetValue(entityName, out rn))
-                return rn.NodeIsInLatestState;
-            return false;
+            RaftStateMachine rn = this.raftNode;
+            return rn.NodeIsInLatestState;
+            
         }
-        public AddLogEntryResult AddLogEntry(byte[] data, string entityName = "default")
-        {
-            RaftStateMachine rn = null;
-            var msgId = AsyncResponseHandler.GetMessageId();
-            if (this.raftNodes.TryGetValue(entityName, out rn))
-                return rn.logHandler.AddLogEntry(data,msgId);
-            return new AddLogEntryResult { AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_FOUND_BY_NAME };
-        }
+        /// <summary>
+        /// called by external service
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="entityName"></param>
+        /// <param name="timeoutMs"></param>
+        /// <returns></returns>
                
         public async Task<bool> AddLogEntryAsync(byte[] data, string entityName = "default", int timeoutMs = 20000)
         {
             if (System.Threading.Interlocked.Read(ref disposed) == 1)
                 return false;
 
-            RaftStateMachine rn = null;
-            if (this.raftNodes.TryGetValue(entityName, out rn))
+            RaftStateMachine rn = this.raftNode; ;
             {
                 //Generating externalId
                 var msgId = AsyncResponseHandler.GetMessageId();
@@ -162,11 +150,7 @@ namespace Raft.Transport
                 return;
             try
             {
-                foreach (var rn in this.raftNodes)
-                {
-                    rn.Value.Dispose();
-                }
-                this.raftNodes.Clear();
+                this.raftNode = null;
             }
             catch (Exception ex)
             {
@@ -190,9 +174,8 @@ namespace Raft.Transport
         /// <param name="entityName"></param>
         public void Debug_PrintOutInMemory(string entityName = "default")
         {
-            RaftStateMachine rn = null;
-            if (this.raftNodes.TryGetValue(entityName, out rn))
-                rn.Debug_PrintOutInMemory();
+            RaftStateMachine rn = this.raftNode;
+            rn.Debug_PrintOutInMemory();
         }
     }//eo class
 }//eo namespace

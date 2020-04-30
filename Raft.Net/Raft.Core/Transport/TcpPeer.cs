@@ -34,7 +34,7 @@ namespace Raft.Transport
         {
             _nettyclient = client;
             trn = rn;
-            trn.GetNodeByEntityName("default").TM.FireEventEach(10000, (o) =>
+            trn.GetNode().TM.FireEventEach(10000, (o) =>
             {
             }, null, true);
         }
@@ -114,7 +114,7 @@ namespace Raft.Transport
                         {
                             try
                             {
-                                var node = trn.GetNodeByEntityName(msg.EntityName);
+                                var node = trn.GetNode();
                                 if (node != null)
                                 {
                                     node.IncomingSignalHandler(this.na, msg.RaftSignalType, msg.orginalObject);
@@ -141,7 +141,7 @@ namespace Raft.Transport
                             trn.log.Log(new WarningLogEntry()
                             {
                                 LogType = WarningLogEntry.eLogType.DEBUG,
-                                Description = $"{trn.port} ({trn.GetNodeByEntityName("default").NodeState})> peer {na.NodeAddressId} sent: { Tcpmsg.MsgType }"
+                                Description = $"{trn.port} ({trn.GetNode().NodeState})> peer {na.NodeAddressId} sent: { Tcpmsg.MsgType }"
                             });
                         }
                         return;

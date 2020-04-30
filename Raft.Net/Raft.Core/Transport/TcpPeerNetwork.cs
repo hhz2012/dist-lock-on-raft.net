@@ -111,7 +111,7 @@ namespace Raft.Transport
                         peer.Send(RaftCommand.HandshakeACK,new TcpMsgHandshake()
                         {
                             NodeListeningPort = trn.port,
-                            NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId,
+                            NodeUID = trn.GetNode().NodeAddress.NodeUId,
                         });
                     }
                 }
@@ -135,7 +135,7 @@ namespace Raft.Transport
         public async Task Handshake()        
         {
             await HandshakeTo(trn.NodeSettings.TcpClusterEndPoints);
-            trn.GetNodeByEntityName("default").TM.FireEventEach(3000, RetestConnections, null, false);
+            trn.GetNode().TM.FireEventEach(3000, RetestConnections, null, false);
         }
         public bool IsMe(PeerEndPoint endPoint)
         {
@@ -157,7 +157,7 @@ namespace Raft.Transport
                     el.Peer.Send(RaftCommand.Handshake, new TcpMsgHandshake()
                     {
                         NodeListeningPort = trn.port,
-                        NodeUID = trn.GetNodeByEntityName("default").NodeAddress.NodeUId, //Generated GUID on Node start                        
+                        NodeUID = trn.GetNode().NodeAddress.NodeUId, //Generated GUID on Node start                        
 
                      });
                     if (GlobalConfig.DebugNetwork)
@@ -203,7 +203,7 @@ namespace Raft.Transport
         {
             try
             {
-                if (!trn.GetNodeByEntityName("default").IsRunning)
+                if (!trn.GetNode().IsRunning)
                     return;
                 List<TcpPeer> peers = GetPeers();
                 
