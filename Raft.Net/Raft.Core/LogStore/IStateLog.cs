@@ -18,6 +18,7 @@ namespace Raft
         public ulong LastAppliedIndex { get; set; }
         //leader operation 
 
+        
         void AddLogEntry(StateLogEntrySuggestion suggestion);
         void AddLogEntryByFollower(StateLogEntrySuggestion suggestion);
         bool CommitLogEntry(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
@@ -34,6 +35,8 @@ namespace Raft
         void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
         //void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
+
+        void ReloadFromStorage();
         void Dispose();
     }
     public enum eEntryAcceptanceResult

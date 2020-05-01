@@ -359,7 +359,8 @@ namespace Raft.Core.Raft
                 if (this.log.LastCommittedIndex < applied.StateLogEntryId && this.stateMachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
                 {
                     bool commited = this.log.CommitLogEntry(address, majorityQuantity, applied);
-
+                    //todo:: the above operation may commit many log at the same time 
+                    //should double check this logic
                     // if (this.log.lstCommited.Count > 0)
                     if (commited) this.Commited();
                     return eEntryAcceptanceResult.Committed;

@@ -1,4 +1,5 @@
 ﻿using DBreeze;
+using Raft.Core.LogStore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Raft.Core.StateMachine
     {
         public static IStateLog GetLog(RaftStateMachine node, string workPath)
         {
-            return new StateLog(node, null);
+            return new SimpleMemLogStore(node, null);
         }
     }
 }

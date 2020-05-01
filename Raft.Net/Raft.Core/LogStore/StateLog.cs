@@ -578,5 +578,9 @@ namespace Raft
             Console.WriteLine("Debug_PrintOutInMemory failed - not InMemory entity");
         }
 
+        public void ReloadFromStorage()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
