@@ -18,12 +18,17 @@ namespace Raft.Core.Raft
         ulong tempStateLogId = 0;
         ulong tempStateLogTerm = 0;
         //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
-        public Queue<Tuple<byte[], byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+        public Queue<Tuple<byte[], byte[]>> rediretQueue = new Queue<Tuple<byte[], byte[]>>();
+        /// <summary>
+        /// Leader only.Stores logs before being distributed.
+        /// </summary>       
+        SortedDictionary<ulong, StateLogEntry> distributeQueue = new SortedDictionary<ulong, StateLogEntry>();
         /// <summary>
         /// Only for the Leader.
         /// Key is StateLogEntryId, Value contains information about how many nodes accepted LogEntry
         /// </summary>
-        Dictionary<ulong, StateLogEntryAcceptance> dStateLogEntryAcceptance = new Dictionary<ulong, StateLogEntryAcceptance>();
+        Dictionary<ulong, StateLogEntryAcceptance> acceptStateTable = new Dictionary<ulong, StateLogEntryAcceptance>();
+      
 
         public StateMachineLogHandler(RaftStateMachine stateMachine, IStateLog log, IBusinessHandler handler)
         {
@@ -66,15 +71,15 @@ namespace Raft.Core.Raft
                 lock (this.stateMachine.lock_Operations)
                 {
                     if (iData != null)
-                        this.NoLeaderCache.Enqueue(new Tuple<byte[], byte[]>(iData, externalId));
+                        this.rediretQueue.Enqueue(new Tuple<byte[], byte[]>(iData, externalId));
 
                     if (this.stateMachine.States.NodeState == eNodeState.Leader)
                     {
                         this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
 
-                        while (this.NoLeaderCache.Count > 0)
+                        while (this.rediretQueue.Count > 0)
                         {
-                            var nlc = this.NoLeaderCache.Dequeue();
+                            var nlc = this.rediretQueue.Dequeue();
                             this.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
                             EnqueueAndDistrbuteLog();
                         }
@@ -95,9 +100,9 @@ namespace Raft.Core.Raft
                             res.LeaderAddress = this.stateMachine.LeaderNodeAddress;
 
                             //Redirecting only in case if there is a leader                            
-                            while (this.NoLeaderCache.Count > 0)
+                            while (this.rediretQueue.Count > 0)
                             {
-                                var nlc = this.NoLeaderCache.Dequeue();
+                                var nlc = this.rediretQueue.Dequeue();
                                 this.stateMachine.network.SendTo(this.stateMachine.LeaderNodeAddress, eRaftSignalType.StateLogRedirectRequest,
                                 (
                                     new StateLogEntryRedirectRequest
@@ -198,7 +203,7 @@ namespace Raft.Core.Raft
 
             if (res == eEntryAcceptanceResult.Committed)
             {
-                qDistribution.Remove(applied.StateLogEntryId);
+                distributeQueue.Remove(applied.StateLogEntryId);
                 //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                 this.stateMachine.timerLoop.RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
@@ -234,10 +239,7 @@ namespace Raft.Core.Raft
             //Don't answer, committed value wil be delivered via standard channel           
         }
 
-        /// <summary>
-        /// Leader only.Stores logs before being distributed.
-        /// </summary>       
-        SortedDictionary<ulong, StateLogEntry> qDistribution = new SortedDictionary<ulong, StateLogEntry>();
+      
 
         /// <summary>
         /// Is called from lock_operations
@@ -269,7 +271,7 @@ namespace Raft.Core.Raft
                 ExternalID = externalID
             };
 
-            qDistribution.Add(le.Index, le);
+            distributeQueue.Add(le.Index, le);
             return le;
         }
         /// <summary>
@@ -277,7 +279,7 @@ namespace Raft.Core.Raft
         /// </summary>
         public void ClearLogEntryForDistribution()
         {
-            qDistribution.Clear();
+            distributeQueue.Clear();
         }
         /// <summary>
         /// under lock_operations
@@ -299,19 +301,19 @@ namespace Raft.Core.Raft
         /// <returns></returns>
         StateLogEntrySuggestion GetNextLogEntryToBeDistributed()
         {
-            if (qDistribution.Count < 1)
+            if (distributeQueue.Count < 1)
                 return null;
 
             return new StateLogEntrySuggestion()
             {
-                StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
+                StateLogEntry = distributeQueue.OrderBy(r => r.Key).First().Value,
                 LeaderTerm = this.stateMachine.NodeTerm
             };
         }
 
         public void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid)
         {
-            foreach (var el in dStateLogEntryAcceptance)
+            foreach (var el in acceptStateTable)
                 el.Value.acceptedEndPoints.Remove(endpointsid);
         }
         /// <summary>
@@ -332,7 +334,7 @@ namespace Raft.Core.Raft
 
             StateLogEntryAcceptance acc = null;
 
-            if (dStateLogEntryAcceptance.TryGetValue(applied.StateLogEntryId, out acc))
+            if (acceptStateTable.TryGetValue(applied.StateLogEntryId, out acc))
             {
                 if (acc.Term != applied.StateLogEntryTerm)
                     return eEntryAcceptanceResult.NotAccepted;   //Came from wrong Leader probably
@@ -348,13 +350,13 @@ namespace Raft.Core.Raft
 
                 acc.acceptedEndPoints.Add(address.EndPointSID);
 
-                dStateLogEntryAcceptance[applied.StateLogEntryId] = acc;
+                acceptStateTable[applied.StateLogEntryId] = acc;
             }
             if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
             {
                 this.log.LastAppliedIndex = applied.StateLogEntryId;
                 //Removing from Dictionary
-                dStateLogEntryAcceptance.Remove(applied.StateLogEntryId);
+                acceptStateTable.Remove(applied.StateLogEntryId);
 
                 if (this.log.LastCommittedIndex < applied.StateLogEntryId && this.stateMachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
                 {
@@ -376,7 +378,7 @@ namespace Raft.Core.Raft
         /// </summary>
         public void ClearLogAcceptance()
         {
-            this.dStateLogEntryAcceptance.Clear();
+            this.acceptStateTable.Clear();
         }
         public void AddLogEntryByFollower(StateLogEntrySuggestion suggestion)
         {
