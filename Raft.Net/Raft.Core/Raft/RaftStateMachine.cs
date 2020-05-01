@@ -29,13 +29,7 @@ namespace Raft
         public IStateLog NodeStateLog = null;
         public StateMachineTimerLoop timerLoop = null;
         public StateMachineLogHandler logHandler = null;
-
-        /// <summary>
-        /// Supplied via constructor. Will be called and supply
-        /// </summary>
-        //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
-        public IBusinessHandler handler;
-
+       
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
         /// <summary>
         /// Current node Term
@@ -73,8 +67,6 @@ namespace Raft
         public RaftStateMachine(RaftEntitySettings settings, string workPath, IPeerConnector raftSender, IWarningLog log, IBusinessHandler handler)
         {
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
-            this.handler = handler;
-            this.handler.SetNode(this);
             network = raftSender;
             entitySettings = settings;         
            

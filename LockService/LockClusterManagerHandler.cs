@@ -15,7 +15,7 @@ namespace Raft.Core.RaftEmulator
             
         }
 
-        public void BusinessLogicIsApplied(ulong index)
+        public void ExecuteBusinessLogic(ulong index)
         {
             throw new NotImplementedException();
         }
@@ -26,6 +26,11 @@ namespace Raft.Core.RaftEmulator
         }
 
         public bool SetNode(RaftStateMachine raftNode)
+        {
+            return true;
+        }
+
+        public bool ExecuteBusinessLogic(StateLogEntry entry, RaftStateMachine node)
         {
             return true;
         }

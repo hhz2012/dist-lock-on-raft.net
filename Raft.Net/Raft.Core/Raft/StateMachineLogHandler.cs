@@ -11,7 +11,7 @@ namespace Raft.Core.Raft
     public class StateMachineLogHandler
     {
         RaftStateMachine stateMachine;
-        IBusinessHandler handler;
+        IBusinessHandler businessLogicHandler;
         IStateLog log;
         ulong tempPrevStateLogId = 0;
         ulong tempPrevStateLogTerm = 0;
@@ -34,7 +34,7 @@ namespace Raft.Core.Raft
         {
             this.stateMachine = stateMachine;
             this.log = log;
-            this.handler = handler;
+            this.businessLogicHandler = handler;
         }
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace Raft.Core.Raft
         {
             if (System.Threading.Interlocked.CompareExchange(ref this.stateMachine.States.inCommit, 1, 0) != 0)
                 return;
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 StateLogEntry sle = null;
                 while (true)
@@ -152,13 +152,10 @@ namespace Raft.Core.Raft
 
                     try
                     {
-                        if (this.stateMachine.handler.DoAction(this.stateMachine.entitySettings.EntityName, sle.Index, sle.Data))
+                        if (this.businessLogicHandler.ExecuteBusinessLogic(sle,this.stateMachine))
                         {
                             //In case if business logic commit was successful
-                            lock (this.stateMachine.lock_Operations)
-                            {
-                                this.stateMachine.handler.BusinessLogicIsApplied(sle.Index);
-                            }
+                            
                             //Notifying Async AddLog
                             if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
                             {
@@ -169,7 +166,7 @@ namespace Raft.Core.Raft
                         }
                         else
                         {
-                            System.Threading.Thread.Sleep(500);
+                            await Task.Delay(500);
                             //repeating with the same id
                         }
                     }
