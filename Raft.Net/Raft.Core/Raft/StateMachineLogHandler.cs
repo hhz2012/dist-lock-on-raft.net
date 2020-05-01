@@ -23,7 +23,7 @@ namespace Raft.Core.Raft
             if (this.stateMachine.InLogEntrySend)
                 return;
 
-            var suggest = this.stateMachine.NodeStateLog.AddNextEntryToStateLogByLeader();
+            var suggest = this.stateMachine.NodeStateLog.distributeAndEnqueuLogByLeader();
             if (suggest == null)
                 return;
 
@@ -39,7 +39,7 @@ namespace Raft.Core.Raft
         /// <param name="data"></param>
         /// <param name="logEntryExternalId"></param>
         /// <returns></returns>
-        public AddLogEntryResult AddLogEntry(byte[] iData, byte[] externalId = null)
+        public AddLogEntryResult AddLogEntryRequest(byte[] iData, byte[] externalId = null)
         {
             AddLogEntryResult res = new AddLogEntryResult();
 

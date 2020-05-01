@@ -94,9 +94,7 @@ namespace Raft
         {
             this.statemachine = rn;
             db = new LiteDatabase(workPath);
-
-            if (rn.entitySettings.EntityName != "default")
-                stateTableName += "_" + rn.entitySettings.EntityName;
+            stateTableName += "_" + rn.entitySettings.EntityName;
 
             var col = this.db.GetCollection<StateLogEntry>(this.stateTableName);
             var list = col.Query().ToList();
@@ -199,7 +197,7 @@ namespace Raft
         /// Copyies from distribution silo table and puts in StateLog table       
         /// </summary>
         /// <returns></returns>
-        public StateLogEntrySuggestion AddNextEntryToStateLogByLeader()
+        public StateLogEntrySuggestion distributeAndEnqueuLogByLeader()
         {
             var suggest = GetNextLogEntryToBeDistributed();
             if (suggest == null)

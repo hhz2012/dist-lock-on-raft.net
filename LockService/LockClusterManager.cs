@@ -111,7 +111,7 @@ namespace LockService
             //Console.WriteLine("start lock oper" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
             await Task.Run(async () =>
             {
-                var result = await ((RaftServiceNode)leader).AddLogEntryAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
+                var result = await ((RaftServiceNode)leader).AddLogEntryRequestAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
             }
         );
            // Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);

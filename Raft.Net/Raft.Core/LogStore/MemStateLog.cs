@@ -85,7 +85,7 @@ namespace Raft.Core.StateMachine
         /// Copyies from distribution silo table and puts in StateLog table       
         /// </summary>
         /// <returns></returns>
-        public StateLogEntrySuggestion AddNextEntryToStateLogByLeader()
+        public StateLogEntrySuggestion distributeAndEnqueuLogByLeader()
         {
             var suggest = this.leaderState.GetNextLogEntryToBeDistributed();
             if (suggest == null)

@@ -208,7 +208,7 @@ namespace Raft
         /// Copyies from distribution silo table and puts in StateLog table       
         /// </summary>
         /// <returns></returns>
-        public StateLogEntrySuggestion AddNextEntryToStateLogByLeader()
+        public StateLogEntrySuggestion distributeAndEnqueuLogByLeader()
         {
             var suggest = GetNextLogEntryToBeDistributed();
             if (suggest == null)

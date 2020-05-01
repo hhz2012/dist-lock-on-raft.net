@@ -96,7 +96,7 @@ namespace Raft.Transport
         /// <param name="timeoutMs"></param>
         /// <returns></returns>
                
-        public async Task<bool> AddLogEntryAsync(byte[] data, string entityName = "default", int timeoutMs = 20000)
+        public async Task<bool> AddLogEntryRequestAsync(byte[] data, string entityName = "default", int timeoutMs = 20000)
         {
             if (System.Threading.Interlocked.Read(ref disposed) == 1)
                 return false;
@@ -110,7 +110,7 @@ namespace Raft.Transport
                 resp.TimeoutsMs = timeoutMs; //enable for amre
                 resp.Init_AMRE();
                 AsyncResponseHandler.df[msgIdStr] = resp;
-                var aler = rn.logHandler.AddLogEntry(data,msgId);
+                var aler = rn.logHandler.AddLogEntryRequest(data,msgId);
                 switch(aler.AddResult)
                 {
                     case AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED:

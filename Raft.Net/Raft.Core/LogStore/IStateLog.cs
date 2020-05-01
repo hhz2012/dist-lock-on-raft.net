@@ -27,7 +27,7 @@ namespace Raft
 
         public ulong LastAppliedIndex { get; set; }
         //leader operation 
-        StateLogEntrySuggestion AddNextEntryToStateLogByLeader();
+        StateLogEntrySuggestion distributeAndEnqueuLogByLeader();
         StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null);
         eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
         //load local log for follower
