@@ -34,7 +34,7 @@ namespace Raft
         /// Supplied via constructor. Will be called and supply
         /// </summary>
         //Func<string, ulong, byte[],RaftNode, bool> OnCommit = null;
-        public IActionHandler handler;
+        public IBusinessHandler handler;
 
         uint NodesQuantityInTheCluster = 2; //We need this value to calculate majority while leader election
         /// <summary>
@@ -46,6 +46,10 @@ namespace Raft
         /// </summary>
         ulong LastVotedTermId = 0;
         /// <summary>
+        /// Node settings
+        /// </summary>
+        internal RaftEntitySettings entitySettings = null;
+        /// <summary>
         /// Address of the current node
         /// </summary>
         public NodeRaftAddress NodeAddress = new NodeRaftAddress();
@@ -53,31 +57,10 @@ namespace Raft
         /// In case if current node is not Leader. It holds leader address
         /// </summary>
         public NodeRaftAddress LeaderNodeAddress = null;
-        /// <summary>
-        /// Received Current leader heartbeat time
-        /// </summary>
-        public DateTime LeaderHeartbeatArrivalTime = DateTime.MinValue;
-        /// <summary>
-        /// Latest heartbeat from leader, can be null on start
-        /// </summary>
-        internal LeaderHeartbeat LeaderHeartbeat = null;
-        public HashSet<string> VotesQuantity = new HashSet<string>();
-        //state 
-        public eNodeState NodeState = eNodeState.Follower;
-        /// <summary>
-        /// Is node started 
-        /// </summary>
-        public bool IsRunning = false;
-        /// <summary>
-        /// Node settings
-        /// </summary>
-        internal RaftEntitySettings entitySettings = null;
+
         public string NodeName { get; set; }
 
-        public int inCommit = 0;
-        public bool InLogEntrySend = false;
-        //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
-        public Queue<Tuple<byte[], byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+        public StateMachineState States = new StateMachineState();
 
         /// <summary>
         /// 
@@ -87,7 +70,7 @@ namespace Raft
         /// <param name="raftSender"></param>
         /// <param name="log"></param>
         /// <param name="OnCommit"></param>
-        public RaftStateMachine(RaftEntitySettings settings, string workPath, IPeerConnector raftSender, IWarningLog log, IActionHandler handler)
+        public RaftStateMachine(RaftEntitySettings settings, string workPath, IPeerConnector raftSender, IWarningLog log, IBusinessHandler handler)
         {
             this.Log = log ?? throw new Exception("Raft.Net: ILog is not supplied");
             this.handler = handler;
@@ -98,7 +81,7 @@ namespace Raft
             //Starting time master
             var TM = new TimeMaster(log);
             this.timerLoop = new StateMachineTimerLoop(TM, settings, this);
-            this.logHandler = new StateMachineLogHandler(this);
+            this.logHandler = new StateMachineLogHandler(this,handler);
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, workPath);
             //Adding AddLogEntryAsync cleanup
@@ -113,7 +96,7 @@ namespace Raft
         {
             lock (lock_Operations)
             {
-                if (IsRunning)
+                if (States.IsRunning)
                 {
                     VerbosePrint("Node {0} ALREADY RUNNING", NodeAddress.NodeAddressId);
                     return;
@@ -121,7 +104,7 @@ namespace Raft
                 VerbosePrint("Node {0} has started.", NodeAddress.NodeAddressId);
                 //In the beginning node is Follower
                 SetNodeFollower();
-                IsRunning = true;
+                States.IsRunning = true;
             }
             //Tries to executed not yet applied by business logic entries
             this.logHandler.Commited();
@@ -134,11 +117,11 @@ namespace Raft
             lock (lock_Operations)
             {
                 this.timerLoop.Stop();
-                this.NodeState = eNodeState.Follower;
-                this.NodeStateLog.LeaderSynchronizationIsActive = false;
+                this.States.NodeState = eNodeState.Follower;
+                this.States.LeaderSynchronizationIsActive = false;
                 //this.NodeStateLog.FlushSleCache();
-                VerbosePrint("Node {0} state is {1}", NodeAddress.NodeAddressId,this.NodeState);
-                IsRunning = false;
+                VerbosePrint("Node {0} state is {1}", NodeAddress.NodeAddressId,this.States.NodeState);
+                States.IsRunning = false;
             }
         }
         /// <summary>
@@ -192,7 +175,7 @@ namespace Raft
         /// <param name="data"></param>
         void ParseStateLogEntryRequest(NodeRaftAddress address, object data)
         {
-            if (this.NodeState != eNodeState.Leader)
+            if (this.States.NodeState != eNodeState.Leader)
                 return;
             StateLogEntryRequest req = data as StateLogEntryRequest;
             //Getting suggestion
@@ -212,14 +195,14 @@ namespace Raft
         /// <param name="data"></param>
         void ParseStateLogEntrySuggestion(NodeRaftAddress address, object data)
         {
-            if (this.NodeState != eNodeState.Follower)
+            if (this.States.NodeState != eNodeState.Follower)
                 return;
 
             StateLogEntrySuggestion suggest = data as StateLogEntrySuggestion; 
 
             if (this.NodeTerm > suggest.LeaderTerm)  //Sending Leader is not Leader anymore
             {
-                this.NodeStateLog.LeaderSynchronizationIsActive = false;
+                this.States.LeaderSynchronizationIsActive = false;
                 return;
             }
 
@@ -275,8 +258,8 @@ namespace Raft
                     return;
                 NodeStateLog.ClearStateLogStartingFromCommitted();
             }
-            NodeStateLog.LeaderSynchronizationIsActive = true;
-            NodeStateLog.LeaderSynchronizationRequestWasSent = DateTime.UtcNow;
+            States.LeaderSynchronizationIsActive = true;
+            States.LeaderSynchronizationRequestWasSent = DateTime.UtcNow;
 
             StateLogEntryRequest req = null;
           
@@ -305,7 +288,7 @@ namespace Raft
                 // Stepping back to follower state
                 this.NodeTerm = incomingTermId;
 
-                switch (this.NodeState)
+                switch (this.States.NodeState)
                 {
                     case eNodeState.Follower:
                         //Do nothing
@@ -313,13 +296,13 @@ namespace Raft
                     case eNodeState.Leader:
                         //Stepping back
                         SetNodeFollower();
-                        VerbosePrint("Node {0} state is {1} _CompareCurrentTermWithIncoming", NodeAddress.NodeAddressId, this.NodeState);
+                        VerbosePrint("Node {0} state is {1} _CompareCurrentTermWithIncoming", NodeAddress.NodeAddressId, this.States.NodeState);
                         break;
                     case eNodeState.Candidate:
                         //Stepping back
                         //When node is candidate, Election_TimerId always works
                         SetNodeFollower();
-                        VerbosePrint("Node {0} state is {1} _CompareCurrentTermWithIncoming", NodeAddress.NodeAddressId, this.NodeState);                        
+                        VerbosePrint("Node {0} state is {1} _CompareCurrentTermWithIncoming", NodeAddress.NodeAddressId, this.States.NodeState);                        
                         break;
                 }
             }            
@@ -336,10 +319,10 @@ namespace Raft
         /// </summary>
         void SetNodeFollower()
         {
-            if (this.NodeState != eNodeState.Follower)
-                VerbosePrint("Node {0} state is {1} of {2}", NodeAddress.NodeAddressId, this.NodeState, this.LeaderNodeAddress?.NodeAddressId);
-            this.NodeState = eNodeState.Follower;
-            this.NodeStateLog.LeaderSynchronizationIsActive = false;
+            if (this.States.NodeState != eNodeState.Follower)
+                VerbosePrint("Node {0} state is {1} of {2}", NodeAddress.NodeAddressId, this.States.NodeState, this.LeaderNodeAddress?.NodeAddressId);
+            this.States.NodeState = eNodeState.Follower;
+            this.States.LeaderSynchronizationIsActive = false;
             this.timerLoop.StopLeaderTimers();
         }
 
@@ -351,27 +334,27 @@ namespace Raft
         void ParseLeaderHeartbeat(NodeRaftAddress address, object data)
         {
             //var LeaderHeartbeat = data.DeserializeProtobuf<LeaderHeartbeat>();
-            this.LeaderHeartbeat = data as LeaderHeartbeat; //data.DeserializeProtobuf<LeaderHeartbeat>();
+            this.States.LeaderHeartbeat = data as LeaderHeartbeat; //data.DeserializeProtobuf<LeaderHeartbeat>();
 
             // Setting variable of the last heartbeat
-            this.LeaderHeartbeatArrivalTime = DateTime.Now;
+            this.States.LeaderHeartbeatArrivalTime = DateTime.Now;
             this.LeaderNodeAddress = address;   //Can be incorrect in case if this node is Leader, must 
             //Comparing Terms
-            if (this.NodeTerm < LeaderHeartbeat.LeaderTerm)
+            if (this.NodeTerm < States.LeaderHeartbeat.LeaderTerm)
             {
-                this.NodeTerm = LeaderHeartbeat.LeaderTerm;
+                this.NodeTerm = States.LeaderHeartbeat.LeaderTerm;
 
-                switch (this.NodeState)
+                switch (this.States.NodeState)
                 {
                     case eNodeState.Leader:
                         //Stepping back from Leader to Follower
                         SetNodeFollower();
-                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.NodeState);
+                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.States.NodeState);
                         break;
                     case eNodeState.Candidate:
                         //Stepping back
                         SetNodeFollower();
-                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.NodeState);
+                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.States.NodeState);
                         break;
                     case eNodeState.Follower:
                         //Ignoring
@@ -381,11 +364,11 @@ namespace Raft
             }
             else
             {
-                switch (this.NodeState)
+                switch (this.States.NodeState)
                 {
                     case eNodeState.Leader:
                         //2 leaders with the same Term
-                        if (this.NodeTerm > LeaderHeartbeat.LeaderTerm)
+                        if (this.NodeTerm > States.LeaderHeartbeat.LeaderTerm)
                         {
                             //Ignoring
                             //Incoming signal is not from the Leader anymore
@@ -395,13 +378,13 @@ namespace Raft
                         {
                             //Stepping back                         
                             SetNodeFollower();
-                            VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.NodeState);
+                            VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.States.NodeState);
                         }
                         break;
                     case eNodeState.Candidate:
                         //Stepping back
                         SetNodeFollower();
-                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.NodeState);
+                        VerbosePrint("Node {0} state is {1} _IncomingSignalHandler", NodeAddress.NodeAddressId, this.States.NodeState);
                         break;
                     case eNodeState.Follower:
                         SetNodeFollower();
@@ -410,7 +393,7 @@ namespace Raft
             }
             //Here will come only Followers
             this.LeaderNodeAddress = address;
-            if (!IsLeaderSynchroTimerActive && !this.NodeStateLog.SetLastCommittedIndexFromLeader(LeaderHeartbeat))
+            if (!IsLeaderSynchroTimerActive && !this.NodeStateLog.SetLastCommittedIndexFromLeader(this.States.LeaderHeartbeat))
             {
                 //VerbosePrint($"{NodeAddress.NodeAddressId}>  in sync 2 ");
                 this.SyncronizeWithLeader();
@@ -442,7 +425,7 @@ namespace Raft
 
             if (vote.VoteType == VoteOfCandidate.eVoteType.VoteFor)
             {
-                switch (this.NodeState)
+                switch (this.States.NodeState)
                 {
                     case eNodeState.Leader:
                         vote.VoteType = VoteOfCandidate.eVoteType.VoteReject;
@@ -486,7 +469,7 @@ namespace Raft
 
             //Sending vote signal back 
             //VerbosePrint("Node {0} voted to node {1} as {2}  _ParseCandidateRequest", NodeAddress.NodeAddressId, address.NodeAddressId, vote.VoteType);
-            VerbosePrint($"Node {NodeAddress.NodeAddressId} ({this.NodeState}) {vote.VoteType} {address.NodeAddressId}  in  _ParseCandidateRequest");
+            VerbosePrint($"Node {NodeAddress.NodeAddressId} ({this.States.NodeState}) {vote.VoteType} {address.NodeAddressId}  in  _ParseCandidateRequest");
 
             network.SendTo(address, eRaftSignalType.VoteOfCandidate, vote, this.NodeAddress, entitySettings.EntityName);
         }
@@ -499,9 +482,9 @@ namespace Raft
         {
             lock(lock_Operations)
             {
-                if(NodeState == eNodeState.Candidate)
+                if(States.NodeState == eNodeState.Candidate)
                 {
-                    VotesQuantity.Remove(endpointsid);
+                    States.VotesQuantity.Remove(endpointsid);
                 }
                 NodeStateLog.Clear_dStateLogEntryAcceptance_PeerDisconnected(endpointsid);
             }
@@ -517,27 +500,27 @@ namespace Raft
             //Node received a node
             var vote = data as VoteOfCandidate;
             var termState = CompareCurrentTermWithIncoming(vote.TermId);
-            if (this.NodeState != eNodeState.Candidate)
+            if (this.States.NodeState != eNodeState.Candidate)
                 return;
 
             switch (vote.VoteType)
             {
                 case VoteOfCandidate.eVoteType.VoteFor:
                     //Calculating if node has Majority of
-                   
-                    //VotesQuantity++;
-                    VotesQuantity.Add(address.EndPointSID);
 
-                    if ((VotesQuantity.Count + 1) >= this.GetMajorityQuantity())                    
+                    //VotesQuantity++;
+                    States.VotesQuantity.Add(address.EndPointSID);
+
+                    if ((States.VotesQuantity.Count + 1) >= this.GetMajorityQuantity())                    
                     {
                         //Majority
                         //Node becomes a Leader
-                        this.NodeState = eNodeState.Leader;
+                        this.States.NodeState = eNodeState.Leader;
                         //this.NodeStateLog.FlushSleCache();
                         this.NodeStateLog.ClearLogAcceptance();
                         this.logHandler.ClearLogEntryForDistribution();
 
-                        VerbosePrint("Node {0} state is {1} _ParseVoteOfCandidate", NodeAddress.NodeAddressId, this.NodeState);
+                        VerbosePrint("Node {0} state is {1} _ParseVoteOfCandidate", NodeAddress.NodeAddressId, this.States.NodeState);
                         VerbosePrint("Node {0} is Leader **********************************************",NodeAddress.NodeAddressId);
                         
                         //Stopping timers
@@ -574,13 +557,13 @@ namespace Raft
             {
                 lock (lock_Operations)
                 {
-                    if (this.NodeState == eNodeState.Leader)
+                    if (this.States.NodeState == eNodeState.Leader)
                         return true;
                     else
                     {
-                        if (this.LeaderHeartbeat == null)
+                        if (this.States.LeaderHeartbeat == null)
                             return false;
-                        return this.NodeStateLog.LastCommittedIndex == this.LeaderHeartbeat.LastStateLogCommittedIndex;
+                        return this.NodeStateLog.LastCommittedIndex == this.States.LeaderHeartbeat.LastStateLogCommittedIndex;
                     }
                 }
                     
@@ -590,9 +573,9 @@ namespace Raft
         {
             get
             {
-                if (this.NodeStateLog.LeaderSynchronizationIsActive)
+                if (this.States.LeaderSynchronizationIsActive)
                 {
-                    if (DateTime.UtcNow.Subtract(this.NodeStateLog.LeaderSynchronizationRequestWasSent).TotalMinutes > this.NodeStateLog.LeaderSynchronizationTimeOut)
+                    if (DateTime.UtcNow.Subtract(this.States.LeaderSynchronizationRequestWasSent).TotalMinutes > this.States.LeaderSynchronizationTimeOut)
                     {
                         //Time to repeat request
                     }
@@ -609,7 +592,7 @@ namespace Raft
         {
             get
             {
-                return this.NodeState == eNodeState.Leader;
+                return this.States.NodeState == eNodeState.Leader;
             }
         }
         /// <summary>

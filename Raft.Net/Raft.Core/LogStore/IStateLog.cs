@@ -15,15 +15,9 @@ namespace Raft
 
         public ulong LastCommittedIndex { get; set; }
 
-        public bool LeaderSynchronizationIsActive { get; set; }
-    
-        public DateTime LeaderSynchronizationRequestWasSent { get; set; }
-
         public ulong LastCommittedIndexTerm { get; set; }
 
         public ulong LastBusinessLogicCommittedIndex { get; set; }
-
-        public uint LeaderSynchronizationTimeOut { get; set; }
 
         public ulong LastAppliedIndex { get; set; }
         //leader operation 

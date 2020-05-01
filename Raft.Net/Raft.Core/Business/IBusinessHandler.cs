@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Raft.Core.Handler
 {
-    public interface IActionHandler
+    public interface IBusinessHandler
     {
         bool DoAction(string entityName, ulong index, byte[] data);
         bool SetNode(RaftStateMachine raftNode);

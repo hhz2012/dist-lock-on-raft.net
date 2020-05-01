@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Raft.Core.RaftEmulator
 {
-    public class LockClusterManagerHandler : IActionHandler
+    public class LockClusterManagerHandler : IBusinessHandler
     {
         
         public LockClusterManagerHandler( )

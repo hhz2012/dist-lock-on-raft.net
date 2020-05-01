@@ -141,7 +141,7 @@ namespace Raft.Transport
                             trn.log.Log(new WarningLogEntry()
                             {
                                 LogType = WarningLogEntry.eLogType.DEBUG,
-                                Description = $"{trn.port} ({trn.GetNode().NodeState})> peer {na.NodeAddressId} sent: { Tcpmsg.MsgType }"
+                                Description = $"{trn.port} ({trn.GetNode().States.NodeState})> peer {na.NodeAddressId} sent: { Tcpmsg.MsgType }"
                             });
                         }
                         return;

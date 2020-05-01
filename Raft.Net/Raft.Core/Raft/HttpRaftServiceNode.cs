@@ -21,7 +21,7 @@ namespace Raft.Core.Raft
 
         public HttpRaftServiceNode(NodeSettings nodeSettings,
                                    string dbreezePath,
-                                   IActionHandler handler,
+                                   IBusinessHandler handler,
                                    int port = 4250,
                                    string nodeName = "default",
                                    int httpPort=10000,

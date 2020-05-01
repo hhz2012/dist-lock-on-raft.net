@@ -1,4 +1,5 @@
 ﻿using DBreeze.Utils;
+using Raft.Core.Handler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,13 +11,18 @@ namespace Raft.Core.Raft
     public class StateMachineLogHandler
     {
         RaftStateMachine stateMachine;
+        IBusinessHandler handler;
         ulong tempPrevStateLogId = 0;
         ulong tempPrevStateLogTerm = 0;
         ulong tempStateLogId = 0;
         ulong tempStateLogTerm = 0;
-        public StateMachineLogHandler(RaftStateMachine stateMachine)
+        //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
+        public Queue<Tuple<byte[], byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+
+        public StateMachineLogHandler(RaftStateMachine stateMachine, IBusinessHandler handler)
         {
             this.stateMachine = stateMachine;
+            this.handler = handler;
         }
 
         /// <summary>
@@ -25,7 +31,7 @@ namespace Raft.Core.Raft
         /// </summary>
         public void EnqueueAndDistrbuteLog()
         {
-            if (this.stateMachine.InLogEntrySend)
+            if (this.stateMachine.States.InLogEntrySend)
                 return;
 
             var suggest = this.moveDistributeToStore();
@@ -34,7 +40,7 @@ namespace Raft.Core.Raft
 
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
 
-            this.stateMachine.InLogEntrySend = true;
+            this.stateMachine.States.InLogEntrySend = true;
             this.stateMachine.timerLoop.RunLeaderLogResendTimer();
             this.stateMachine.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName);
         }
@@ -53,15 +59,15 @@ namespace Raft.Core.Raft
                 lock (this.stateMachine.lock_Operations)
                 {
                     if (iData != null)
-                        this.stateMachine.NoLeaderCache.Enqueue(new Tuple<byte[], byte[]>(iData, externalId));
+                        this.NoLeaderCache.Enqueue(new Tuple<byte[], byte[]>(iData, externalId));
 
-                    if (this.stateMachine.NodeState == eNodeState.Leader)
+                    if (this.stateMachine.States.NodeState == eNodeState.Leader)
                     {
                         this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
 
-                        while (this.stateMachine.NoLeaderCache.Count > 0)
+                        while (this.NoLeaderCache.Count > 0)
                         {
-                            var nlc = this.stateMachine.NoLeaderCache.Dequeue();
+                            var nlc = this.NoLeaderCache.Dequeue();
                             this.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
                             EnqueueAndDistrbuteLog();
                         }
@@ -82,9 +88,9 @@ namespace Raft.Core.Raft
                             res.LeaderAddress = this.stateMachine.LeaderNodeAddress;
 
                             //Redirecting only in case if there is a leader                            
-                            while (this.stateMachine.NoLeaderCache.Count > 0)
+                            while (this.NoLeaderCache.Count > 0)
                             {
-                                var nlc = this.stateMachine.NoLeaderCache.Dequeue();
+                                var nlc = this.NoLeaderCache.Dequeue();
                                 this.stateMachine.network.SendTo(this.stateMachine.LeaderNodeAddress, eRaftSignalType.StateLogRedirectRequest,
                                 (
                                     new StateLogEntryRedirectRequest
@@ -107,7 +113,7 @@ namespace Raft.Core.Raft
         }
         internal void Commited()
         {
-            if (System.Threading.Interlocked.CompareExchange(ref this.stateMachine.inCommit, 1, 0) != 0)
+            if (System.Threading.Interlocked.CompareExchange(ref this.stateMachine.States.inCommit, 1, 0) != 0)
                 return;
             Task.Run(() =>
             {
@@ -118,7 +124,7 @@ namespace Raft.Core.Raft
                     {
                         if (this.stateMachine.NodeStateLog.LastCommittedIndex == this.stateMachine.NodeStateLog.LastBusinessLogicCommittedIndex)
                         {
-                            System.Threading.Interlocked.Exchange(ref this.stateMachine.inCommit, 0);
+                            System.Threading.Interlocked.Exchange(ref this.stateMachine.States.inCommit, 0);
                             return;
                         }
                         else
@@ -126,7 +132,7 @@ namespace Raft.Core.Raft
                             sle = this.stateMachine.NodeStateLog.GetCommitedEntryByIndex(this.stateMachine.NodeStateLog.LastBusinessLogicCommittedIndex + 1);
                             if (sle == null)
                             {
-                                System.Threading.Interlocked.Exchange(ref this.stateMachine.inCommit, 0);
+                                System.Threading.Interlocked.Exchange(ref this.stateMachine.States.inCommit, 0);
                                 return;
                             }
                         }
@@ -176,7 +182,7 @@ namespace Raft.Core.Raft
         /// <param name="data"></param>
         public void ParseStateLogEntryAccepted(NodeRaftAddress address, object data)
         {
-            if (this.stateMachine.NodeState != eNodeState.Leader)
+            if (this.stateMachine.States.NodeState != eNodeState.Leader)
                 return;
 
             StateLogEntryApplied applied = data as StateLogEntryApplied;
@@ -199,7 +205,7 @@ namespace Raft.Core.Raft
                 };
                 this.stateMachine.network.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName, true);
                 //---------------------------------------
-                this.stateMachine.InLogEntrySend = false;
+                this.stateMachine.States.InLogEntrySend = false;
                 EnqueueAndDistrbuteLog();
             }
         }
@@ -212,7 +218,7 @@ namespace Raft.Core.Raft
         {
             StateLogEntryRedirectRequest req = data as StateLogEntryRedirectRequest;
 
-            if (this.stateMachine.NodeState != eNodeState.Leader)  //Just return
+            if (this.stateMachine.States.NodeState != eNodeState.Leader)  //Just return
                 return;
 
             this.AddStateLogEntryForDistribution(req.Data, req.ExternalID);//, redirectId);

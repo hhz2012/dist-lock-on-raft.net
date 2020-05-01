@@ -315,7 +315,7 @@ namespace Raft.Core.StateMachine
 
             }
             //if (this.LastCommittedIndex < rn.LeaderHeartbeat.LastStateLogCommittedIndex)
-            if (rn.LeaderHeartbeat != null && this.LastCommittedIndex < rn.LeaderHeartbeat.LastStateLogCommittedIndex)
+            if (rn.States.LeaderHeartbeat != null && this.LastCommittedIndex < rn.States.LeaderHeartbeat.LastStateLogCommittedIndex)
             {
                 rn.SyncronizeWithLeader(true);
             }

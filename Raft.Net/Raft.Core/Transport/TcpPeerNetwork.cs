@@ -203,7 +203,7 @@ namespace Raft.Transport
         {
             try
             {
-                if (!trn.GetNode().IsRunning)
+                if (!trn.GetNode().States.IsRunning)
                     return;
                 List<TcpPeer> peers = GetPeers();
                 

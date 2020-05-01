@@ -133,13 +133,13 @@ namespace Raft.Core.Raft
             {
                 lock (this.stateMachine.lock_Operations)
                 {
-                    if (this.stateMachine.NodeState == eNodeState.Leader) //me is the leader
+                    if (this.stateMachine.States.NodeState == eNodeState.Leader) //me is the leader
                     {
                         RemoveLeaderHeartbeatWaitingTimer();
                         return;
                     }
 
-                    if (DateTime.Now.Subtract(this.stateMachine.LeaderHeartbeatArrivalTime).TotalMilliseconds < this.entitySettings.LeaderHeartbeatMs)
+                    if (DateTime.Now.Subtract(this.stateMachine.States.LeaderHeartbeatArrivalTime).TotalMilliseconds < this.entitySettings.LeaderHeartbeatMs)
                         return; //Early to elect, we receive completely heartbeat from the leader
 
                     this.stateMachine.VerbosePrint("Node {0} LeaderHeartbeatTimeout", this.stateMachine.NodeAddress.NodeAddressId);
@@ -168,15 +168,15 @@ namespace Raft.Core.Raft
 
                     this.TM.Election_TimerId = 0;
 
-                    if (this.stateMachine.NodeState == eNodeState.Leader)
+                    if (this.stateMachine.States.NodeState == eNodeState.Leader)
                         return;
                     this.stateMachine.VerbosePrint("Node {0} election timeout", this.stateMachine.NodeAddress.NodeAddressId);
-                    this.stateMachine.NodeState = eNodeState.Candidate;
+                    this.stateMachine.States.NodeState = eNodeState.Candidate;
                     this.stateMachine.LeaderNodeAddress = null;
-                    this.stateMachine.VerbosePrint("Node {0} state is {1} _ElectionTimeout", this.stateMachine.NodeAddress.NodeAddressId, this.stateMachine.NodeState);
+                    this.stateMachine.VerbosePrint("Node {0} state is {1} _ElectionTimeout", this.stateMachine.NodeAddress.NodeAddressId, this.stateMachine.States.NodeState);
                     //Voting for self
                     //VotesQuantity = 1;
-                    this.stateMachine.VotesQuantity.Clear();
+                    this.stateMachine.States.VotesQuantity.Clear();
                     //Increasing local term number
                     this.stateMachine.NodeTerm++;
                     req = new CandidateRequest()
@@ -231,7 +231,7 @@ namespace Raft.Core.Raft
                     if (this.TM.LeaderLogResend_TimerId == 0)
                         return;
                     RemoveLeaderLogResendTimer();
-                    this.stateMachine.InLogEntrySend = false;
+                    this.stateMachine.States.InLogEntrySend = false;
                     this.stateMachine.logHandler.EnqueueAndDistrbuteLog();
                 }
 

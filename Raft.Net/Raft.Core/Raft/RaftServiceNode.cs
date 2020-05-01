@@ -23,7 +23,7 @@ namespace Raft.Transport
         internal NodeSettings NodeSettings = null;
         public string NodeName { get; set; }
         
-        public RaftServiceNode(NodeSettings nodeSettings, string dbreezePath, IActionHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
+        public RaftServiceNode(NodeSettings nodeSettings, string dbreezePath, IBusinessHandler handler, int port = 4250, string nodeName="default", IWarningLog log = null)
         {
             if (nodeSettings == null)
                 nodeSettings = new NodeSettings();

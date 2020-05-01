@@ -495,7 +495,7 @@ namespace Raft
             {
 
             }
-            if (statemachine.LeaderHeartbeat != null && this.LastCommittedIndex < statemachine.LeaderHeartbeat.LastStateLogCommittedIndex)
+            if (statemachine.States.LeaderHeartbeat != null && this.LastCommittedIndex < statemachine.States.LeaderHeartbeat.LastStateLogCommittedIndex)
             {
                 statemachine.SyncronizeWithLeader(true);
             }
