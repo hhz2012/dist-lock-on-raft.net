@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <Compile Remove="Async\AsyncManualResetEvent.cs" />
+    <Compile Remove="LogStore\LiteLog.cs" />
+    <Compile Remove="LogStore\MemStateLog.cs" />
     <Compile Remove="Transport\SPROT1.cs" />
     <Compile Remove="Utils\ProtobufSerializatorExtension.cs" />
     <Compile Remove="Utils\SDictAutoIdentityLong.cs" />

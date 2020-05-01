@@ -12,16 +12,23 @@ namespace Raft.Core.Raft
     {
         RaftStateMachine stateMachine;
         IBusinessHandler handler;
+        IStateLog log;
         ulong tempPrevStateLogId = 0;
         ulong tempPrevStateLogTerm = 0;
         ulong tempStateLogId = 0;
         ulong tempStateLogTerm = 0;
         //Tuple of iData and externalId of that data (formed by node to receive info back that this command is added)
         public Queue<Tuple<byte[], byte[]>> NoLeaderCache = new Queue<Tuple<byte[], byte[]>>();
+        /// <summary>
+        /// Only for the Leader.
+        /// Key is StateLogEntryId, Value contains information about how many nodes accepted LogEntry
+        /// </summary>
+        Dictionary<ulong, StateLogEntryAcceptance> dStateLogEntryAcceptance = new Dictionary<ulong, StateLogEntryAcceptance>();
 
-        public StateMachineLogHandler(RaftStateMachine stateMachine, IBusinessHandler handler)
+        public StateMachineLogHandler(RaftStateMachine stateMachine, IStateLog log,IBusinessHandler handler)
         {
             this.stateMachine = stateMachine;
+            this.log = log;
             this.handler = handler;
         }
 
@@ -187,7 +194,7 @@ namespace Raft.Core.Raft
 
             StateLogEntryApplied applied = data as StateLogEntryApplied;
 
-            var res = this.stateMachine.NodeStateLog.EntryIsAccepted(address, this.stateMachine.GetMajorityQuantity(), applied);
+            var res = this.EntryIsAccepted(address, this.stateMachine.GetMajorityQuantity(), applied);
 
             if (res == eEntryAcceptanceResult.Committed)
             {
@@ -309,6 +316,75 @@ namespace Raft.Core.Raft
                 StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
                 LeaderTerm = this.stateMachine.NodeTerm
             };
+        }
+
+        public void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid)
+        {
+            foreach (var el in dStateLogEntryAcceptance)
+                el.Value.acceptedEndPoints.Remove(endpointsid);
+        }
+        /// <summary>
+        /// +
+        /// Only Leader's proc.
+        /// Accepts entry return true if Committed
+        /// </summary>
+        /// <param name="majorityNumber"></param>
+        /// <param name="LogId"></param>
+        /// <param name="TermId"></param>        
+        public eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied)
+        {
+            //If we receive acceptance signals of already Committed entries, we just ignore them
+            if (applied.StateLogEntryId <= this.log.LastCommittedIndex)
+                return eEntryAcceptanceResult.AlreadyAccepted;    //already accepted
+            if (applied.StateLogEntryId <= this.log.LastAppliedIndex)
+                return eEntryAcceptanceResult.AlreadyAccepted;    //already accepted
+
+            StateLogEntryAcceptance acc = null;
+
+            if (dStateLogEntryAcceptance.TryGetValue(applied.StateLogEntryId, out acc))
+            {
+                if (acc.Term != applied.StateLogEntryTerm)
+                    return eEntryAcceptanceResult.NotAccepted;   //Came from wrong Leader probably
+                acc.acceptedEndPoints.Add(address.EndPointSID);
+            }
+            else
+            {
+                acc = new StateLogEntryAcceptance()
+                {
+                    Index = applied.StateLogEntryId,
+                    Term = applied.StateLogEntryTerm
+                };
+
+                acc.acceptedEndPoints.Add(address.EndPointSID);
+
+                dStateLogEntryAcceptance[applied.StateLogEntryId] = acc;
+            }
+            if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
+            {
+                this.log.LastAppliedIndex = applied.StateLogEntryId;
+                //Removing from Dictionary
+                dStateLogEntryAcceptance.Remove(applied.StateLogEntryId);
+
+                if (this.log.LastCommittedIndex < applied.StateLogEntryId && this.stateMachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
+                {
+                    bool commited=this.log.EntryIsAccepted(address, majorityQuantity, applied);
+
+                   // if (this.log.lstCommited.Count > 0)
+                    if (commited) this.Commited();
+                    return eEntryAcceptanceResult.Committed;
+                }
+            }
+
+            return eEntryAcceptanceResult.Accepted;
+
+        }
+        /// <summary>
+        /// +
+        /// When node becomes a Leader, it clears acceptance log
+        /// </summary>
+        public void ClearLogAcceptance()
+        {
+            this.dStateLogEntryAcceptance.Clear();
         }
     }
 }

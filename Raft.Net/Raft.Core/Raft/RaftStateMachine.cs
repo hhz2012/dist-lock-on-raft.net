@@ -81,9 +81,10 @@ namespace Raft
             //Starting time master
             var TM = new TimeMaster(log);
             this.timerLoop = new StateMachineTimerLoop(TM, settings, this);
-            this.logHandler = new StateMachineLogHandler(this,handler);
+            
             //Starting state logger
             NodeStateLog = StateLogFactory.GetLog(this, workPath);
+            this.logHandler = new StateMachineLogHandler(this, NodeStateLog, handler);
             //Adding AddLogEntryAsync cleanup
             this.timerLoop.StartClearup();
             
@@ -486,7 +487,7 @@ namespace Raft
                 {
                     States.VotesQuantity.Remove(endpointsid);
                 }
-                NodeStateLog.Clear_dStateLogEntryAcceptance_PeerDisconnected(endpointsid);
+                this.logHandler.Clear_dStateLogEntryAcceptance_PeerDisconnected(endpointsid);
             }
         }
 
@@ -517,7 +518,7 @@ namespace Raft
                         //Node becomes a Leader
                         this.States.NodeState = eNodeState.Leader;
                         //this.NodeStateLog.FlushSleCache();
-                        this.NodeStateLog.ClearLogAcceptance();
+                        this.logHandler.ClearLogAcceptance();
                         this.logHandler.ClearLogEntryForDistribution();
 
                         VerbosePrint("Node {0} state is {1} _ParseVoteOfCandidate", NodeAddress.NodeAddressId, this.States.NodeState);

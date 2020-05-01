@@ -71,11 +71,7 @@ namespace Raft
         /// Follower part. State Log synchro with Leader.
         /// </summary>
         public uint LeaderSynchronizationTimeOut { get; set; } = 1;
-        /// <summary>
-        /// Only for the Leader.
-        /// Key is StateLogEntryId, Value contains information about how many nodes accepted LogEntry
-        /// </summary>
-        Dictionary<ulong, StateLogEntryAcceptance> dStateLogEntryAcceptance = new Dictionary<ulong, StateLogEntryAcceptance>();
+     
 
         SortedDictionary<ulong, Tuple<ulong, StateLogEntry>> sleCache = new SortedDictionary<ulong, Tuple<ulong, StateLogEntry>>();
         ulong sleCacheIndex = 0;
@@ -504,13 +500,8 @@ namespace Raft
         }
 
 
-        public void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid)
-        {
-            foreach (var el in dStateLogEntryAcceptance)
-                el.Value.acceptedEndPoints.Remove(endpointsid);
-        }
 
-      
+
         /// <summary>
         /// +
         /// Only Leader's proc.
@@ -519,40 +510,10 @@ namespace Raft
         /// <param name="majorityNumber"></param>
         /// <param name="LogId"></param>
         /// <param name="TermId"></param>        
-        public eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied)
+        public bool EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied)
         {
             //If we receive acceptance signals of already Committed entries, we just ignore them
-            if (applied.StateLogEntryId <= this.LastCommittedIndex)
-                return eEntryAcceptanceResult.AlreadyAccepted;    //already accepted
-            if (applied.StateLogEntryId <= this.LastAppliedIndex)
-                return eEntryAcceptanceResult.AlreadyAccepted;    //already accepted
-
-            StateLogEntryAcceptance acc = null;
-
-            if (dStateLogEntryAcceptance.TryGetValue(applied.StateLogEntryId, out acc))
-            {
-                if (acc.Term != applied.StateLogEntryTerm)
-                    return eEntryAcceptanceResult.NotAccepted;   //Came from wrong Leader probably
-                acc.acceptedEndPoints.Add(address.EndPointSID);
-            }
-            else
-            {
-                acc = new StateLogEntryAcceptance()
-                {
-                    Index = applied.StateLogEntryId,
-                    Term = applied.StateLogEntryTerm
-                };
-
-                acc.acceptedEndPoints.Add(address.EndPointSID);
-
-                dStateLogEntryAcceptance[applied.StateLogEntryId] = acc;
-            }
-            if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
-            {
-                this.LastAppliedIndex = applied.StateLogEntryId;
-                //Removing from Dictionary
-                dStateLogEntryAcceptance.Remove(applied.StateLogEntryId);
-
+       
                 if (this.LastCommittedIndex < applied.StateLogEntryId && statemachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
                 {
                     //Saving committed entry (all previous are automatically committed)
@@ -576,24 +537,15 @@ namespace Raft
                     this.LastCommittedIndex = applied.StateLogEntryId;
                     this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
 
-                    if (lstCommited.Count > 0)
-                        this.statemachine.logHandler.Commited();
-                    return eEntryAcceptanceResult.Committed;
+                return lstCommited.Count > 0;
                 }
-            }
 
-            return eEntryAcceptanceResult.Accepted;
+            return false;
+          
 
         }
 
-        /// <summary>
-        /// +
-        /// When node becomes a Leader, it clears acceptance log
-        /// </summary>
-        public void ClearLogAcceptance()
-        {
-            this.dStateLogEntryAcceptance.Clear();
-        }
+      
 
         public void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm)
         {

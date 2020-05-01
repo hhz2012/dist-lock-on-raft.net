@@ -9,7 +9,7 @@ namespace Raft.Core.StateMachine
     {
         public static IStateLog GetLog(RaftStateMachine node, string workPath)
         {
-            return new MemStateLog(node,workPath);
+            return new StateLog(node, null);
         }
     }
 }

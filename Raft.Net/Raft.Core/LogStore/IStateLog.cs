@@ -4,7 +4,7 @@
 */
 using System;
 using System.Collections.Generic;
-using static Raft.Core.StateMachine.MemStateLog;
+//using static Raft.Core.StateMachine.MemStateLog;
 
 namespace Raft
 {
@@ -22,7 +22,7 @@ namespace Raft
         public ulong LastAppliedIndex { get; set; }
         //leader operation 
              
-        eEntryAcceptanceResult EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
+        bool EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
         //load local log for follower
         StateLogEntrySuggestion GetNextStateLogEntrySuggestionFromRequested(StateLogEntryRequest req);
         //follower operatoin
@@ -33,11 +33,8 @@ namespace Raft
         void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
         void BusinessLogicIsApplied(ulong index);
 
-        //clear operations
-        void ClearLogAcceptance();
-   
         void ClearStateLogStartingFromCommitted();
-        void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
+        //void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
         void Dispose();
        
