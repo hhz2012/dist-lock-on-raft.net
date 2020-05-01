@@ -34,7 +34,15 @@ namespace Raft.Core.LogStore
             PreviousStateLogTerm = suggestion.StateLogEntry.PreviousStateLogTerm;
             StateLogId = suggestion.StateLogEntry.Index;
             StateLogTerm = suggestion.StateLogEntry.Term;
-            this.list.Add(suggestion.StateLogEntry);
+            if (list.Exists(s => s.Index == suggestion.StateLogEntry.Index && s.Term == suggestion.StateLogEntry.Term))
+            {
+                var oldValue = list.Find(s => s.Index == suggestion.StateLogEntry.Index);
+                oldValue.IsCommitted = suggestion.IsCommitted;
+            }
+            else
+            {
+                this.list.Add(suggestion.StateLogEntry);
+            }
         }
 
         public void AddLogEntryByFollower(StateLogEntrySuggestion suggestion)
@@ -160,8 +168,13 @@ namespace Raft.Core.LogStore
 
         public SyncResult SyncCommitByHeartBeat(LeaderHeartbeat lhb)
         {
-            if (this.LastCommittedIndex < lhb.LastStateLogCommittedIndex)
+            if (GlobalConfig.Verbose)
             {
+                Console.WriteLine($"leader info:{lhb.LastStateLogCommittedIndex} ,mine:{this.LastCommittedIndex}");
+            }
+                if (this.LastCommittedIndex < lhb.LastStateLogCommittedIndex)
+            {
+                
                 //find if this entry exist 
                 var entry = list.Find(s => s.Term == lhb.LastStateLogCommittedIndexTerm && s.Index == lhb.StateLogLatestIndex);
                 if (entry != null)
@@ -169,6 +182,7 @@ namespace Raft.Core.LogStore
                     if (!entry.IsCommitted)
                     {
                         entry.IsCommitted = true;
+                        this.LastCommittedIndex = lhb.LastStateLogCommittedIndex;
                         return new SyncResult() { HasCommit = true, Synced = true };
                     }
                     else

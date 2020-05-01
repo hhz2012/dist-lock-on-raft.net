@@ -177,6 +177,10 @@ namespace Raft
             StateLogEntryRequest req = data as StateLogEntryRequest;
             //Getting suggestion
             var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestion(req);
+            if (GlobalConfig.Verbose)
+            {
+                Console.WriteLine($"create suggestion to req:{req.StateLogEntryId}" + suggestion.StateLogEntry.Index + " is commit:" + suggestion.StateLogEntry.IsCommitted);
+            }
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
             if (suggestion != null)
             {
@@ -215,14 +219,13 @@ namespace Raft
                 
                 if (sle == null)
                 {
-                    
                     this.SyncronizeWithLeader();
                     return;
                     
                 }                
             }          
             //We can apply new Log Entry from the Leader and answer successfully
-            this.NodeStateLog.AddLogEntryByFollower(suggest);
+            this.logHandler.AddLogEntryByFollower(suggest);
 
             StateLogEntryApplied applied = new StateLogEntryApplied()
             {
@@ -388,7 +391,8 @@ namespace Raft
             }
             if (!IsLeaderSynchroTimerActive && !result.Synced)
             {
-                //VerbosePrint($"{NodeAddress.NodeAddressId}>  in sync 2 ");
+                VerbosePrint($"{NodeAddress.NodeAddressId} start sync ");
+
                 this.SyncronizeWithLeader();
             }
         }

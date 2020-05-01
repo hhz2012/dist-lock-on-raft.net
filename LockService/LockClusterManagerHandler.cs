@@ -33,6 +33,10 @@ namespace Raft.Core
         public bool ExecuteBusinessLogic(StateLogEntry entry, RaftStateMachine node)
         {
             node.NodeStateLog.LastBusinessLogicCommittedIndex = entry.Index;
+            if (GlobalConfig.Verbose)
+            {
+                Console.WriteLine("receive entry:"+entry.Index+" on node:"+node.NodeName);
+            }
             return true;
         }
     }
