@@ -7,6 +7,6 @@ namespace Raft.Core
     public class GlobalConfig
     {
         public static bool DebugNetwork = true;
-        public static bool Verbose = false;
+        public static bool Verbose = true;
     }
 }

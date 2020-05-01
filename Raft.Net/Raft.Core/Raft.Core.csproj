@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Remove="Async\AsyncManualResetEvent.cs" />
+    <Compile Remove="LogStore\IndexTermDict.cs" />
     <Compile Remove="LogStore\LeaderSyncState.cs" />
     <Compile Remove="LogStore\LiteLog.cs" />
     <Compile Remove="LogStore\MemStateLog.cs" />
