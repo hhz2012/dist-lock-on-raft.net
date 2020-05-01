@@ -53,7 +53,7 @@ namespace Raft.Core.Raft
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Sending to all (I/T): {suggest.StateLogEntry.Index}/{suggest.StateLogEntry.Term};");
 
             this.stateMachine.States.InLogEntrySend = true;
-            this.stateMachine.timerLoop.RunLeaderLogResendTimer();
+            this.stateMachine.timerLoop.EnterLeaderLogResendTimeLoop();
             this.stateMachine.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName);
         }
         /// <summary>
@@ -75,7 +75,7 @@ namespace Raft.Core.Raft
 
                     if (this.stateMachine.States.NodeState == eNodeState.Leader)
                     {
-                        this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
+                        this.stateMachine.timerLoop.StopNoLeaderAddCommandTimeLoop();
 
                         while (this.rediretQueue.Count > 0)
                         {
@@ -91,11 +91,11 @@ namespace Raft.Core.Raft
                         if (this.stateMachine.LeaderNodeAddress == null)
                         {
                             res.AddResult = AddLogEntryResult.eAddLogEntryResult.NO_LEADER_YET;
-                            this.stateMachine.timerLoop.RunNoLeaderAddCommandTimer();
+                            this.stateMachine.timerLoop.EnterNoLeaderAddCommandTimeLoop();
                         }
                         else
                         {
-                            this.stateMachine.timerLoop.RemoveNoLeaderAddCommandTimer();
+                            this.stateMachine.timerLoop.StopNoLeaderAddCommandTimeLoop();
                             res.AddResult = AddLogEntryResult.eAddLogEntryResult.NODE_NOT_A_LEADER;
                             res.LeaderAddress = this.stateMachine.LeaderNodeAddress;
 
@@ -205,7 +205,7 @@ namespace Raft.Core.Raft
             {
                 distributeQueue.Remove(applied.StateLogEntryId);
                 //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
-                this.stateMachine.timerLoop.RemoveLeaderLogResendTimer();
+                this.stateMachine.timerLoop.StopLeaderLogResendTimeLoop();
                 //Force heartbeat, to make followers to get faster info about commited elements
                 LeaderHeartbeat heartBeat = new LeaderHeartbeat()
                 {
@@ -238,9 +238,6 @@ namespace Raft.Core.Raft
 
             //Don't answer, committed value wil be delivered via standard channel           
         }
-
-      
-
         /// <summary>
         /// Is called from lock_operations
         /// Adds to silo table, until is moved to log table.

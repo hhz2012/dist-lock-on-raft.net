@@ -21,7 +21,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RunElectionTimer()
+        public void EnterElectionTimeLoop()
         {
             if (this.TM.Election_TimerId == 0)
             {
@@ -34,7 +34,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RunLeaderHeartbeatWaitingTimer()
+        public void EnterLeaderHeartbeatWaitingLoop()
         {
             if (this.TM.LeaderHeartbeat_TimerId == 0)
                 this.TM.LeaderHeartbeat_TimerId = this.TM.FireEventEach(entitySettings.LeaderHeartbeatMs, LeaderHeartbeatTimeout, null, false);
@@ -43,7 +43,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RunLeaderTimer()
+        public void EnterLeaderLoop()
         {
             if (this.TM.Leader_TimerId == 0)
             {
@@ -56,7 +56,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RemoveLeaderTimer()
+        public void StopLeaderLoop()
         {
             if (this.TM.Leader_TimerId > 0)
             {
@@ -65,7 +65,7 @@ namespace Raft.Core.Raft
             }
         }
 
-        public void RunNoLeaderAddCommandTimer()
+        public void EnterNoLeaderAddCommandTimeLoop()
         {
             if (this.TM.NoLeaderAddCommand_TimerId == 0)
                 this.TM.NoLeaderAddCommand_TimerId = this.TM.FireEventEach(entitySettings.NoLeaderAddCommandResendIntervalMs, (o) => {
@@ -73,7 +73,7 @@ namespace Raft.Core.Raft
                 }, null, false);
         }
 
-        public void RemoveNoLeaderAddCommandTimer()
+        public void StopNoLeaderAddCommandTimeLoop()
         {
             if (this.TM.NoLeaderAddCommand_TimerId > 0)
             {
@@ -81,14 +81,14 @@ namespace Raft.Core.Raft
                 this.TM.NoLeaderAddCommand_TimerId = 0;
             }
         }
-        public void RunLeaderLogResendTimer()
+        public void EnterLeaderLogResendTimeLoop()
         {
             if (this.TM.LeaderLogResend_TimerId == 0)
             {
                 this.TM.LeaderLogResend_TimerId = this.TM.FireEventEach(entitySettings.LeaderLogResendIntervalMs, LeaderLogResendTimerElapse, null, true);
             }
         }
-        public void RemoveLeaderLogResendTimer()
+        public void StopLeaderLogResendTimeLoop()
         {
             if (this.TM.LeaderLogResend_TimerId > 0)
             {
@@ -100,7 +100,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RemoveElectionTimer()
+        public void StopElectionTimeLoop()
         {
             if (this.TM.Election_TimerId > 0)
             {
@@ -111,7 +111,7 @@ namespace Raft.Core.Raft
         /// <summary>
         /// 
         /// </summary>
-        public void RemoveLeaderHeartbeatWaitingTimer()
+        public void StopLeaderHeartbeatWaitingTimeLoop()
         {
             if (this.TM.LeaderHeartbeat_TimerId > 0)
             {
@@ -135,7 +135,7 @@ namespace Raft.Core.Raft
                 {
                     if (this.stateMachine.States.NodeState == eNodeState.Leader) //me is the leader
                     {
-                        RemoveLeaderHeartbeatWaitingTimer();
+                        StopLeaderHeartbeatWaitingTimeLoop();
                         return;
                     }
 
@@ -143,7 +143,7 @@ namespace Raft.Core.Raft
                         return; //Early to elect, we receive completely heartbeat from the leader
 
                     this.stateMachine.VerbosePrint("Node {0} LeaderHeartbeatTimeout", this.stateMachine.NodeAddress.NodeAddressId);
-                    RunElectionTimer();
+                    EnterElectionTimeLoop();
                 }
             }
             catch (Exception ex)
@@ -187,7 +187,7 @@ namespace Raft.Core.Raft
                     };
                     //send to all was here
                     //Setting up new Election Timer
-                    RunElectionTimer();
+                    EnterElectionTimeLoop();
                 }
                 this.stateMachine.network.SendToAll(eRaftSignalType.CandidateRequest, req, this.stateMachine.NodeAddress, entitySettings.EntityName);
             }
@@ -230,7 +230,7 @@ namespace Raft.Core.Raft
                 {
                     if (this.TM.LeaderLogResend_TimerId == 0)
                         return;
-                    RemoveLeaderLogResendTimer();
+                    StopLeaderLogResendTimeLoop();
                     this.stateMachine.States.InLogEntrySend = false;
                     this.stateMachine.logHandler.EnqueueAndDistrbuteLog();
                 }
@@ -247,19 +247,19 @@ namespace Raft.Core.Raft
         public void StopLeaderTimers()
         {
             //Removing timers
-            this.RemoveElectionTimer();
-            this.RemoveLeaderHeartbeatWaitingTimer();
-            this.RemoveLeaderTimer();
-            this.RemoveLeaderLogResendTimer();
+            this.StopElectionTimeLoop();
+            this.StopLeaderHeartbeatWaitingTimeLoop();
+            this.StopLeaderLoop();
+            this.StopLeaderLogResendTimeLoop();
             //Starting Leaderheartbeat
-            this.RunLeaderHeartbeatWaitingTimer();
+            this.EnterLeaderHeartbeatWaitingLoop();
         }
         public void Stop()
         {
-            this.RemoveElectionTimer();
-            this.RemoveLeaderHeartbeatWaitingTimer();
-            this.RemoveLeaderTimer();
-            this.RemoveNoLeaderAddCommandTimer();
+            this.StopElectionTimeLoop();
+            this.StopLeaderHeartbeatWaitingTimeLoop();
+            this.StopLeaderLoop();
+            this.StopNoLeaderAddCommandTimeLoop();
         }
         public void StartClearup()
         {

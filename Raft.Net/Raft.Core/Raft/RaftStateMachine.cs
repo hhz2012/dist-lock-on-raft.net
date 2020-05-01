@@ -462,8 +462,8 @@ namespace Raft
                                 vote.VoteType = VoteOfCandidate.eVoteType.VoteFor;
 
                                 //Restaring Election Timer
-                                this.timerLoop.RemoveElectionTimer();
-                                this.timerLoop.RunElectionTimer();
+                                this.timerLoop.StopElectionTimeLoop();
+                                this.timerLoop.EnterElectionTimeLoop();
                             }
                         }
                         else
@@ -530,8 +530,8 @@ namespace Raft
                         VerbosePrint("Node {0} is Leader **********************************************",NodeAddress.NodeAddressId);
                         
                         //Stopping timers
-                        this.timerLoop.RemoveElectionTimer();
-                        this.timerLoop.RemoveLeaderHeartbeatWaitingTimer();
+                        this.timerLoop.StopElectionTimeLoop();
+                        this.timerLoop.StopLeaderHeartbeatWaitingTimeLoop();
                                                 
                         /*
                          * It's possible that we receive higher term from another leader 
@@ -539,7 +539,7 @@ namespace Raft
                          * other leader can be elected and it will definitely have higher Term, so every Leader node must be ready to it)
                          */                        
 
-                        this.timerLoop.RunLeaderTimer();
+                        this.timerLoop.EnterLeaderLoop();
                     }
                     //else
                     //{
