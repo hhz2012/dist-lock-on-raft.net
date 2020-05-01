@@ -69,7 +69,7 @@ namespace Raft.Core.Raft
         {
             if (this.TM.NoLeaderAddCommand_TimerId == 0)
                 this.TM.NoLeaderAddCommand_TimerId = this.TM.FireEventEach(entitySettings.NoLeaderAddCommandResendIntervalMs, (o) => {
-                    this.stateMachine.logHandler.AddLogEntryRequest(null);
+                    this.stateMachine.logHandler.ProcessAddLogRequest(null);
                 }, null, false);
         }
 
@@ -232,7 +232,7 @@ namespace Raft.Core.Raft
                         return;
                     RemoveLeaderLogResendTimer();
                     this.stateMachine.InLogEntrySend = false;
-                    this.stateMachine.logHandler.ApplyLogEntry();
+                    this.stateMachine.logHandler.EnqueueAndDistrbuteLog();
                 }
 
             }

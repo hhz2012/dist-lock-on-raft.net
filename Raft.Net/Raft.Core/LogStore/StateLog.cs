@@ -82,10 +82,7 @@ namespace Raft
         ulong sleCacheTerm = 0;
         ulong sleCacheBusinessLogicIndex = 0;
 
-        ulong tempPrevStateLogId = 0;
-        ulong tempPrevStateLogTerm = 0;
-        ulong tempStateLogId = 0;
-        ulong tempStateLogTerm = 0;
+
 
         
         DBreezeEngine db = null;
@@ -112,10 +109,10 @@ namespace Raft
                     PreviousStateLogId = sle.PreviousStateLogId;
                     PreviousStateLogTerm = sle.PreviousStateLogTerm;
 
-                    tempPrevStateLogId = PreviousStateLogId;
-                    tempPrevStateLogTerm = PreviousStateLogTerm;
-                    tempStateLogId = StateLogId;
-                    tempStateLogTerm = StateLogTerm;
+                    //tempPrevStateLogId = PreviousStateLogId;
+                    //tempPrevStateLogTerm = PreviousStateLogTerm;
+                    //tempStateLogId = StateLogId;
+                    //tempStateLogTerm = StateLogTerm;
                     rn.NodeTerm = sle.Term;
                 }
                 var rowTerm = t.Select<byte[], byte[]>(stateTableName, new byte[] { 2 });
@@ -140,92 +137,11 @@ namespace Raft
         {
         }
 
-        /// <summary>
-        /// Returns null if nothing to distribute
-        /// </summary>
-        /// <returns></returns>
-        StateLogEntrySuggestion GetNextLogEntryToBeDistributed()
-        {
-            if (qDistribution.Count < 1)
-                return null;
-
-            return new StateLogEntrySuggestion()
-            {
-                StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
-                LeaderTerm = statemachine.NodeTerm
-            };
-        }
+     
 
 
-        /// <summary>
-        /// Leader only.Stores logs before being distributed.
-        /// </summary>       
-        SortedDictionary<ulong, StateLogEntry> qDistribution = new SortedDictionary<ulong, StateLogEntry>();
 
-        /// <summary>
-        /// Is called from lock_operations
-        /// Adds to silo table, until is moved to log table.
-        /// This table can be cleared up on start
-        /// returns concatenated term+index inserted identifier
-        /// </summary>
-        /// <param name="data"></param>
-        /// <param name="externalID">if set up must be returned in OnCommitted to notify that command is executed</param>
-        /// <returns></returns>
-        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
-        {
-            /*
-             * Only nodes of the current term can be distributed
-             */
-
-            tempPrevStateLogId = tempStateLogId;
-            tempPrevStateLogTerm = tempStateLogTerm;
-            tempStateLogId++;
-            tempStateLogTerm = statemachine.NodeTerm;
-
-            StateLogEntry le = new StateLogEntry()
-            {
-                Index = tempStateLogId,
-                Data = data,
-                Term = tempStateLogTerm,
-                PreviousStateLogId = tempPrevStateLogId,
-                PreviousStateLogTerm = tempPrevStateLogTerm,
-                ExternalID = externalID
-            };
-
-            qDistribution.Add(le.Index, le);
-            return le;
-        }
-
-        /// <summary>
-        /// When Node is selected as leader it is cleared
-        /// </summary>
-        public void ClearLogEntryForDistribution()
-        {
-            qDistribution.Clear();
-        }
-        /// <summary>
-        /// under lock_operations
-        /// Copyies from distribution silo table and puts in StateLog table       
-        /// </summary>
-        /// <returns></returns>
-        public StateLogEntrySuggestion distributeAndEnqueuLogByLeader()
-        {
-            var suggest = GetNextLogEntryToBeDistributed();
-            if (suggest == null)
-                return null;
-
-            //Restoring current values
-            PreviousStateLogId = suggest.StateLogEntry.PreviousStateLogId;
-            PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
-            StateLogId = suggest.StateLogEntry.Index;
-            StateLogTerm = suggest.StateLogEntry.Term;
-            using (var t = this.db.GetTransaction())
-            {
-                t.Insert<byte[], byte[]>(stateTableName, new byte[] { 1 }.ToBytes(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term), suggest.StateLogEntry.SerializeBiser());
-                t.Commit();
-            }
-            return suggest;
-        }
+    
 
         /// <summary>
         /// under lock_operations
@@ -548,10 +464,10 @@ namespace Raft
                 StateLogId = suggestion.StateLogEntry.Index;
                 StateLogTerm = suggestion.StateLogEntry.Term;
 
-                tempPrevStateLogId = PreviousStateLogId;
-                tempPrevStateLogTerm = PreviousStateLogTerm;
-                tempStateLogId = StateLogId;
-                tempStateLogTerm = StateLogTerm;
+                //tempPrevStateLogId = PreviousStateLogId;
+                //tempPrevStateLogTerm = PreviousStateLogTerm;
+                //tempStateLogId = StateLogId;
+                //tempStateLogTerm = StateLogTerm;
 
                 if (suggestion.IsCommitted)
                 {
@@ -655,7 +571,7 @@ namespace Raft
 
                         t.Insert<byte[], byte[]>(stateTableName, new byte[] { 2 }, applied.StateLogEntryId.ToBytes(applied.StateLogEntryTerm));
                         t.Commit();
-                        qDistribution.Remove(applied.StateLogEntryId);
+                        //qDistribution.Remove(applied.StateLogEntryId);
                     }
                     this.LastCommittedIndex = applied.StateLogEntryId;
                     this.LastCommittedIndexTerm = applied.StateLogEntryTerm;

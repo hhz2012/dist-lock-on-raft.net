@@ -535,7 +535,7 @@ namespace Raft
                         this.NodeState = eNodeState.Leader;
                         //this.NodeStateLog.FlushSleCache();
                         this.NodeStateLog.ClearLogAcceptance();
-                        this.NodeStateLog.ClearLogEntryForDistribution();
+                        this.logHandler.ClearLogEntryForDistribution();
 
                         VerbosePrint("Node {0} state is {1} _ParseVoteOfCandidate", NodeAddress.NodeAddressId, this.NodeState);
                         VerbosePrint("Node {0} is Leader **********************************************",NodeAddress.NodeAddressId);

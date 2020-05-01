@@ -1,6 +1,7 @@
 ﻿using DBreeze.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,6 +10,10 @@ namespace Raft.Core.Raft
     public class StateMachineLogHandler
     {
         RaftStateMachine stateMachine;
+        ulong tempPrevStateLogId = 0;
+        ulong tempPrevStateLogTerm = 0;
+        ulong tempStateLogId = 0;
+        ulong tempStateLogTerm = 0;
         public StateMachineLogHandler(RaftStateMachine stateMachine)
         {
             this.stateMachine = stateMachine;
@@ -18,12 +23,12 @@ namespace Raft.Core.Raft
         /// Is called from lock_operations
         /// Tries to apply new entry, must be called from lock
         /// </summary>
-        public void ApplyLogEntry()
+        public void EnqueueAndDistrbuteLog()
         {
             if (this.stateMachine.InLogEntrySend)
                 return;
 
-            var suggest = this.stateMachine.NodeStateLog.distributeAndEnqueuLogByLeader();
+            var suggest = this.moveDistributeToStore();
             if (suggest == null)
                 return;
 
@@ -39,7 +44,7 @@ namespace Raft.Core.Raft
         /// <param name="data"></param>
         /// <param name="logEntryExternalId"></param>
         /// <returns></returns>
-        public AddLogEntryResult AddLogEntryRequest(byte[] iData, byte[] externalId = null)
+        public AddLogEntryResult ProcessAddLogRequest(byte[] iData, byte[] externalId = null)
         {
             AddLogEntryResult res = new AddLogEntryResult();
 
@@ -57,8 +62,8 @@ namespace Raft.Core.Raft
                         while (this.stateMachine.NoLeaderCache.Count > 0)
                         {
                             var nlc = this.stateMachine.NoLeaderCache.Dequeue();
-                            this.stateMachine.NodeStateLog.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
-                            ApplyLogEntry();
+                            this.AddStateLogEntryForDistribution(nlc.Item1, nlc.Item2);
+                            EnqueueAndDistrbuteLog();
                         }
                         res.LeaderAddress = this.stateMachine.NodeAddress;
                         res.AddResult = AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED;
@@ -180,6 +185,7 @@ namespace Raft.Core.Raft
 
             if (res == eEntryAcceptanceResult.Committed)
             {
+                qDistribution.Remove(applied.StateLogEntryId);
                 //this.VerbosePrint($"{this.NodeAddress.NodeAddressId}> LogEntry {applied.StateLogEntryId} is COMMITTED (answer from {address.NodeAddressId})"+DateTime.Now.Second+":"+DateTime.Now.Millisecond);
                 this.stateMachine.timerLoop.RemoveLeaderLogResendTimer();
                 //Force heartbeat, to make followers to get faster info about commited elements
@@ -194,7 +200,7 @@ namespace Raft.Core.Raft
                 this.stateMachine.network.SendToAll(eRaftSignalType.LeaderHearthbeat, heartBeat, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName, true);
                 //---------------------------------------
                 this.stateMachine.InLogEntrySend = false;
-                ApplyLogEntry();
+                EnqueueAndDistrbuteLog();
             }
         }
         /// <summary>
@@ -209,11 +215,94 @@ namespace Raft.Core.Raft
             if (this.stateMachine.NodeState != eNodeState.Leader)  //Just return
                 return;
 
-            this.stateMachine.NodeStateLog.AddStateLogEntryForDistribution(req.Data, req.ExternalID);//, redirectId);
-            this.ApplyLogEntry();
+            this.AddStateLogEntryForDistribution(req.Data, req.ExternalID);//, redirectId);
+            this.EnqueueAndDistrbuteLog();
 
             //Don't answer, committed value wil be delivered via standard channel           
         }
 
+        /// <summary>
+        /// Leader only.Stores logs before being distributed.
+        /// </summary>       
+        SortedDictionary<ulong, StateLogEntry> qDistribution = new SortedDictionary<ulong, StateLogEntry>();
+
+        /// <summary>
+        /// Is called from lock_operations
+        /// Adds to silo table, until is moved to log table.
+        /// This table can be cleared up on start
+        /// returns concatenated term+index inserted identifier
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="externalID">if set up must be returned in OnCommitted to notify that command is executed</param>
+        /// <returns></returns>
+        public StateLogEntry AddStateLogEntryForDistribution(byte[] data, byte[] externalID = null)
+        {
+            /*
+             * Only nodes of the current term can be distributed
+             */
+
+            tempPrevStateLogId = tempStateLogId;
+            tempPrevStateLogTerm = tempStateLogTerm;
+            tempStateLogId++;
+            tempStateLogTerm = this.stateMachine.NodeTerm;
+
+            StateLogEntry le = new StateLogEntry()
+            {
+                Index = tempStateLogId,
+                Data = data,
+                Term = tempStateLogTerm,
+                PreviousStateLogId = tempPrevStateLogId,
+                PreviousStateLogTerm = tempPrevStateLogTerm,
+                ExternalID = externalID
+            };
+
+            qDistribution.Add(le.Index, le);
+            return le;
+        }
+        /// <summary>
+        /// When Node is selected as leader it is cleared
+        /// </summary>
+        public void ClearLogEntryForDistribution()
+        {
+            qDistribution.Clear();
+        }
+        /// <summary>
+        /// under lock_operations
+        /// Copyies from distribution silo table and puts in StateLog table       
+        /// </summary>
+        /// <returns></returns>
+        public StateLogEntrySuggestion moveDistributeToStore()
+        {
+            var suggest = GetNextLogEntryToBeDistributed();
+            if (suggest == null)
+                return null;
+
+            //Restoring current values
+            //PreviousStateLogId = suggest.StateLogEntry.PreviousStateLogId;
+            //PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
+            //StateLogId = suggest.StateLogEntry.Index;
+            //StateLogTerm = suggest.StateLogEntry.Term;
+            //using (var t = this.db.GetTransaction())
+            //{
+            //    t.Insert<byte[], byte[]>(stateTableName, new byte[] { 1 }.ToBytes(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term), suggest.StateLogEntry.SerializeBiser());
+            //    t.Commit();
+            //}
+            return suggest;
+        }
+        /// <summary>
+        /// Returns null if nothing to distribute
+        /// </summary>
+        /// <returns></returns>
+        StateLogEntrySuggestion GetNextLogEntryToBeDistributed()
+        {
+            if (qDistribution.Count < 1)
+                return null;
+
+            return new StateLogEntrySuggestion()
+            {
+                StateLogEntry = qDistribution.OrderBy(r => r.Key).First().Value,
+                LeaderTerm = this.stateMachine.NodeTerm
+            };
+        }
     }
 }

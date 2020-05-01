@@ -110,7 +110,7 @@ namespace Raft.Transport
                 resp.TimeoutsMs = timeoutMs; //enable for amre
                 resp.Init_AMRE();
                 AsyncResponseHandler.df[msgIdStr] = resp;
-                var aler = rn.logHandler.AddLogEntryRequest(data,msgId);
+                var aler = rn.logHandler.ProcessAddLogRequest(data,msgId);
                 switch(aler.AddResult)
                 {
                     case AddLogEntryResult.eAddLogEntryResult.LOG_ENTRY_IS_CACHED:
