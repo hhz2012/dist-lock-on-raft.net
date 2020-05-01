@@ -55,6 +55,7 @@ namespace Raft.Core.Raft
             this.stateMachine.States.InLogEntrySend = true;
             this.stateMachine.timerLoop.EnterLeaderLogResendTimeLoop();
             this.stateMachine.network.SendToAll(eRaftSignalType.StateLogEntrySuggestion, suggest, this.stateMachine.NodeAddress, this.stateMachine.entitySettings.EntityName);
+            this.stateMachine.States.InLogEntrySend = false;
         }
         /// <summary>
         /// Leader and followers via redirect. (later callback info for followers is needed)
@@ -132,6 +133,10 @@ namespace Raft.Core.Raft
                 StateLogEntry sle = null;
                 while (true)
                 {
+                    if (GlobalConfig.Verbose)
+                    {
+                        Console.WriteLine("in commited");
+                    }
                     lock (this.stateMachine.lock_Operations)
                     {
                         if (this.stateMachine.NodeStateLog.LastCommittedIndex == this.stateMachine.NodeStateLog.LastBusinessLogicCommittedIndex)
@@ -152,11 +157,19 @@ namespace Raft.Core.Raft
 
                     try
                     {
+                        if (GlobalConfig.Verbose)
+                        {
+                            Console.WriteLine("before call business logic");
+                        }
                         if (this.businessLogicHandler.ExecuteBusinessLogic(sle,this.stateMachine))
                         {
                             //In case if business logic commit was successful
-                            
+
                             //Notifying Async AddLog
+                            if (GlobalConfig.Verbose)
+                            {
+                                Console.WriteLine("before release lock");
+                            }
                             if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
                             {
                                 responseCrate.IsRespOk = true;
@@ -349,6 +362,7 @@ namespace Raft.Core.Raft
             if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
             {
                 this.log.LastAppliedIndex = applied.StateLogEntryId;
+                
                 //Removing from Dictionary
                 acceptStateTable.Remove(applied.StateLogEntryId);
 

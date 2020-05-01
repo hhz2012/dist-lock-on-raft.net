@@ -4,7 +4,7 @@ using DBreeze;
 using DBreeze.Utils;
 using LockService;
 using Raft;
-using Raft.Core.RaftEmulator;
+
 using Raft.Transport;
 
 namespace NodeTest.Core

@@ -74,7 +74,10 @@ namespace Raft.Core.LogStore
                 {
                     tocommit.ForEach(s => s.IsCommitted = true);
                 }
+                this.LastCommittedIndex = applied.StateLogEntryId;
+                this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
                 return tocommit.Count > 0;
+                
             }
             return false;
         }
@@ -95,7 +98,7 @@ namespace Raft.Core.LogStore
 
         public StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm)
         {
-            return list.Find(s => s.Index == logEntryId && s.Index == logEntryTerm);
+            return list.Find(s => s.Index == logEntryId && s.Term == logEntryTerm);
         }
 
         public StateLogEntrySuggestion GetNextStateLogEntrySuggestion(StateLogEntryRequest req)
@@ -124,6 +127,7 @@ namespace Raft.Core.LogStore
                             prevId = list[index - 1].Index;
                             prevTerm = list[index - 1].Term;
                             entry = list[index];
+                            break;
                         }
                     }
                 }

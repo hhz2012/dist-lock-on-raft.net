@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Raft.Core.RaftEmulator
+namespace Raft.Core
 {
     public class LockClusterManagerHandler : IBusinessHandler
     {
@@ -32,6 +32,7 @@ namespace Raft.Core.RaftEmulator
 
         public bool ExecuteBusinessLogic(StateLogEntry entry, RaftStateMachine node)
         {
+            node.NodeStateLog.LastBusinessLogicCommittedIndex = entry.Index;
             return true;
         }
     }

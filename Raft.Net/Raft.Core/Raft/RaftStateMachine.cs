@@ -127,6 +127,10 @@ namespace Raft
         {
             try
             {
+                if (GlobalConfig.Verbose)
+                {
+                    Console.WriteLine("mesage from:" + address.EndPointSID + " signal:" + signalType);
+                }
                 lock (lock_Operations)
                 {
                     switch (signalType)
@@ -211,19 +215,10 @@ namespace Raft
                 
                 if (sle == null)
                 {
-                    //We don't have previous to this log and need new index request   
-                    //VerbosePrint($"{NodeAddress.NodeAddressId}>  in sync 1 ");
-                    if (entitySettings.InMemoryEntity && entitySettings.InMemoryEntityStartSyncFromLatestEntity && this.NodeStateLog.LastAppliedIndex == 0)
-                    {
-                        //helps newly starting mode with specific InMemory parameters get only latest command for the entity
-                        this.NodeStateLog.AddFakePreviousRecordForInMemoryLatestEntity(suggest.StateLogEntry.PreviousStateLogId, suggest.StateLogEntry.PreviousStateLogTerm);
-
-                    }
-                    else
-                    {
-                        this.SyncronizeWithLeader();
-                        return;
-                    }
+                    
+                    this.SyncronizeWithLeader();
+                    return;
+                    
                 }                
             }          
             //We can apply new Log Entry from the Leader and answer successfully

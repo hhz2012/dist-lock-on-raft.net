@@ -8,8 +8,9 @@ using LockServer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Raft;
+using Raft.Core;
 using Raft.Core.Raft;
-using Raft.Core.RaftEmulator;
+
 using Raft.Core.Transport;
 using Raft.Transport;
 using System;
