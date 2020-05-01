@@ -15,6 +15,11 @@ namespace Raft.Core.RaftEmulator
             
         }
 
+        public void BusinessLogicIsApplied(ulong index)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool DoAction(string entityName, ulong index, byte[] data)
         {
             throw new NotImplementedException();

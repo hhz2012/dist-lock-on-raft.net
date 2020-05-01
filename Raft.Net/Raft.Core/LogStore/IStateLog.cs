@@ -21,25 +21,31 @@ namespace Raft
 
         public ulong LastAppliedIndex { get; set; }
         //leader operation 
-             
-        bool EntryIsAccepted(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
-        //load local log for follower
-        StateLogEntrySuggestion GetNextStateLogEntrySuggestionFromRequested(StateLogEntryRequest req);
-        //follower operatoin
-        void AddToLogFollower(StateLogEntrySuggestion suggestion);
+
+        void AddLogEntry(StateLogEntrySuggestion suggestion);
+        void AddLogEntryByFollower(StateLogEntrySuggestion suggestion);
+        bool CommitLogEntry(NodeRaftAddress address, uint majorityQuantity, StateLogEntryApplied applied);
+        SyncResult SyncCommitByHeartBeat(LeaderHeartbeat lhb);
+
+        void RollbackToLastestCommit();
         //common 
         StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
         StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
-        void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
-        void BusinessLogicIsApplied(ulong index);
 
-        void ClearStateLogStartingFromCommitted();
+        //load local log for follower
+        StateLogEntrySuggestion GetNextStateLogEntrySuggestion(StateLogEntryRequest req);
+        //follower operatoin
+    
+     
+        void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm);
+        
+
         //void Clear_dStateLogEntryAcceptance_PeerDisconnected(string endpointsid);
         void Debug_PrintOutInMemory();
         void Dispose();
        
         
-        bool SetLastCommittedIndexFromLeader(LeaderHeartbeat lhb);
+       
     }
     public enum eEntryAcceptanceResult
     {
@@ -70,5 +76,10 @@ namespace Raft
 
         public HashSet<string> acceptedEndPoints = new HashSet<string>();
 
+    }
+    public class SyncResult
+    {
+        public bool Synced { get; set; }
+        public bool HasCommit { get; set; }
     }
 }

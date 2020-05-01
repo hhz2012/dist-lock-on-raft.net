@@ -8,5 +8,7 @@ namespace Raft.Core.Handler
     {
         bool DoAction(string entityName, ulong index, byte[] data);
         bool SetNode(RaftStateMachine raftNode);
+
+        void BusinessLogicIsApplied(ulong index);
     }
 }

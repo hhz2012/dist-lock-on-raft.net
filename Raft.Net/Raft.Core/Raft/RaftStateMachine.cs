@@ -180,7 +180,7 @@ namespace Raft
                 return;
             StateLogEntryRequest req = data as StateLogEntryRequest;
             //Getting suggestion
-            var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestionFromRequested(req);
+            var suggestion = this.NodeStateLog.GetNextStateLogEntrySuggestion(req);
             //VerbosePrint($"{NodeAddress.NodeAddressId} (Leader)> Request (I): {req.StateLogEntryId} from {address.NodeAddressId};");
             if (suggestion != null)
             {
@@ -235,7 +235,7 @@ namespace Raft
                 }                
             }          
             //We can apply new Log Entry from the Leader and answer successfully
-            this.NodeStateLog.AddToLogFollower(suggest);
+            this.NodeStateLog.AddLogEntryByFollower(suggest);
 
             StateLogEntryApplied applied = new StateLogEntryApplied()
             {
@@ -257,7 +257,7 @@ namespace Raft
             {
                 if (IsLeaderSynchroTimerActive)
                     return;
-                NodeStateLog.ClearStateLogStartingFromCommitted();
+                NodeStateLog.RollbackToLastestCommit();
             }
             States.LeaderSynchronizationIsActive = true;
             States.LeaderSynchronizationRequestWasSent = DateTime.UtcNow;
@@ -394,7 +394,12 @@ namespace Raft
             }
             //Here will come only Followers
             this.LeaderNodeAddress = address;
-            if (!IsLeaderSynchroTimerActive && !this.NodeStateLog.SetLastCommittedIndexFromLeader(this.States.LeaderHeartbeat))
+            var result = this.NodeStateLog.SyncCommitByHeartBeat(this.States.LeaderHeartbeat);
+            if (result.HasCommit)
+            {
+                this.logHandler.Commited();
+            }
+            if (!IsLeaderSynchroTimerActive && !result.Synced)
             {
                 //VerbosePrint($"{NodeAddress.NodeAddressId}>  in sync 2 ");
                 this.SyncronizeWithLeader();

@@ -25,7 +25,7 @@ namespace Raft.Core.Raft
         /// </summary>
         Dictionary<ulong, StateLogEntryAcceptance> dStateLogEntryAcceptance = new Dictionary<ulong, StateLogEntryAcceptance>();
 
-        public StateMachineLogHandler(RaftStateMachine stateMachine, IStateLog log,IBusinessHandler handler)
+        public StateMachineLogHandler(RaftStateMachine stateMachine, IStateLog log, IBusinessHandler handler)
         {
             this.stateMachine = stateMachine;
             this.log = log;
@@ -152,7 +152,7 @@ namespace Raft.Core.Raft
                             //In case if business logic commit was successful
                             lock (this.stateMachine.lock_Operations)
                             {
-                                this.stateMachine.NodeStateLog.BusinessLogicIsApplied(sle.Index);
+                                this.stateMachine.handler.BusinessLogicIsApplied(sle.Index);
                             }
                             //Notifying Async AddLog
                             if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
@@ -290,16 +290,7 @@ namespace Raft.Core.Raft
             if (suggest == null)
                 return null;
 
-            //Restoring current values
-            //PreviousStateLogId = suggest.StateLogEntry.PreviousStateLogId;
-            //PreviousStateLogTerm = suggest.StateLogEntry.PreviousStateLogTerm;
-            //StateLogId = suggest.StateLogEntry.Index;
-            //StateLogTerm = suggest.StateLogEntry.Term;
-            //using (var t = this.db.GetTransaction())
-            //{
-            //    t.Insert<byte[], byte[]>(stateTableName, new byte[] { 1 }.ToBytes(suggest.StateLogEntry.Index, suggest.StateLogEntry.Term), suggest.StateLogEntry.SerializeBiser());
-            //    t.Commit();
-            //}
+            this.log.AddLogEntry(suggest);
             return suggest;
         }
         /// <summary>
@@ -367,9 +358,9 @@ namespace Raft.Core.Raft
 
                 if (this.log.LastCommittedIndex < applied.StateLogEntryId && this.stateMachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
                 {
-                    bool commited=this.log.EntryIsAccepted(address, majorityQuantity, applied);
+                    bool commited = this.log.CommitLogEntry(address, majorityQuantity, applied);
 
-                   // if (this.log.lstCommited.Count > 0)
+                    // if (this.log.lstCommited.Count > 0)
                     if (commited) this.Commited();
                     return eEntryAcceptanceResult.Committed;
                 }
@@ -385,6 +376,27 @@ namespace Raft.Core.Raft
         public void ClearLogAcceptance()
         {
             this.dStateLogEntryAcceptance.Clear();
+        }
+        public void AddLogEntryByFollower(StateLogEntrySuggestion suggestion)
+        {
+            this.log.AddLogEntryByFollower(suggestion);
+            if (suggestion.IsCommitted)
+            {
+                this.stateMachine.logHandler.Commited();
+            }
+            if (stateMachine.States.LeaderHeartbeat != null && log.LastCommittedIndex < stateMachine.States.LeaderHeartbeat.LastStateLogCommittedIndex)
+            {
+                stateMachine.SyncronizeWithLeader(true);
+            }
+            else
+                stateMachine.States.LeaderSynchronizationIsActive = false;
+            if (stateMachine.States.LeaderHeartbeat != null
+                && log.LastCommittedIndex < stateMachine.States.LeaderHeartbeat.LastStateLogCommittedIndex)
+            {
+                stateMachine.SyncronizeWithLeader(true);
+            }
+            else
+                stateMachine.States.LeaderSynchronizationIsActive = false;
         }
     }
 }
