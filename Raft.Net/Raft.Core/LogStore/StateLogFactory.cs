@@ -10,7 +10,7 @@ namespace Raft.Core.StateMachine
     {
         public static IStateLog GetLog(RaftStateMachine node, string workPath)
         {
-            return new SimpleMemLogStore(node, null);
+            return new LevelDbLogStore(node, workPath);
         }
     }
 }

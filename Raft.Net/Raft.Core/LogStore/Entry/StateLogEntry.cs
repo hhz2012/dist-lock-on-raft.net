@@ -63,7 +63,7 @@ namespace Raft
         /// <summary>
         /// Used for determining cancellation of AppendLogEntryAsync by the non-leader node
         /// </summary>
-        public byte[] ExternalID { get; set; }
+        public byte[] ExternalID { get; set; } 
 
     #region "Biser"
     public Biser.Encoder BiserEncoder(Biser.Encoder existingEncoder = null)

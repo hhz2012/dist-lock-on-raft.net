@@ -1,5 +1,6 @@
 ﻿using LevelDB;
 using System;
+using Biser;
 using System.Collections.Generic;
 using System.Text;
 
@@ -12,8 +13,8 @@ namespace Raft.Core.LogStore
         public LevelDbLogStore(RaftStateMachine rn,string path)
         {
             this.stateMachine = rn;
-            string logdbFile = path + "\\logdb.db";
-            db = DB.Open(logdbFile);
+            string logdbFile = path + "_logdb.db";
+            db = DB.Open(logdbFile,new Options() { CreateIfMissing = true });
         }
         public ulong StateLogId { get; set; }
         public ulong StateLogTerm { get; set; }
@@ -59,7 +60,8 @@ namespace Raft.Core.LogStore
             }
             else
             {
-                db.Put(WriteOptions.Default, key, (Slice)suggestion.StateLogEntry.BiserEncoder().Encode());
+                var data = suggestion.StateLogEntry.BiserEncode();
+                db.Put(WriteOptions.Default, key, (Slice)data);
             }
         }
 
@@ -69,7 +71,7 @@ namespace Raft.Core.LogStore
             var key = GetKey(suggestion.StateLogEntry.Term, suggestion.StateLogEntry.Index);
             var iter = db.NewIterator(ReadOptions.Default);
             iter.Seek(key);
-            while(true)
+            while(iter.Valid())
             {
                 iter.Next();
                 if (iter.Valid())
@@ -113,7 +115,7 @@ namespace Raft.Core.LogStore
                     var entry = StateLogEntry.BiserDecode(iter.Value().ToArray());
                     if (entry.IsCommitted) break;
                     entry.IsCommitted = true;
-                    var value = (Slice)entry.BiserEncoder().Encode();
+                    var value = (Slice)entry.BiserEncode();
                     db.Put(WriteOptions.Default, key, value);
                     update++;
                     iter.Prev();
@@ -261,7 +263,7 @@ namespace Raft.Core.LogStore
                     if (!entry.IsCommitted)
                     {
                         entry.IsCommitted = true;
-                        value = (Slice)entry.BiserEncoder().Encode();
+                        value = (Slice)entry.BiserEncode();
                         db.Put(WriteOptions.Default, key, value);
                         this.LastCommittedIndex = lhb.LastStateLogCommittedIndex;
                         return new SyncResult() { HasCommit = true, Synced = true };
