@@ -53,6 +53,8 @@ namespace LockServer
 
         static MessageBody NewMessage() => new MessageBody("Hello, World!");
 
+        static MessageBody NewMessage2() => new MessageBody("Hello, World!");
+
         public override async void ChannelRead(IChannelHandlerContext ctx, object message)
         {
             if (message is IHttpRequest request)
@@ -81,6 +83,25 @@ namespace LockServer
             string uri = request.Uri;
             switch (uri)
             {
+                case "/lock":
+                    LockOper op2 = new LockOper()
+                    {
+                        Key = "key",
+                        Oper = "lock",
+                        Session = "session1"
+                    };
+                    var ack1 = Task.Run(async () =>
+                    {
+                        return await manager.TestWorkOperation(op2);
+                    }).GetAwaiter().GetResult();
+
+                    //byte[] json2 = Encoding.UTF8.GetBytes(NewMessage2().ToJsonFormat());
+                    //this.WriteResponse(ctx, Unpooled.WrappedBuffer(json2), TypeJson, JsonClheaderValue);
+
+                    byte[] json2 = Encoding.UTF8.GetBytes(new MessageBody(ack1).ToJsonFormat());
+                    var length = json2.Length;
+                    this.WriteResponse(ctx, Unpooled.WrappedBuffer(json2), TypeJson, AsciiString.Cached($"{length}"));
+                    break;
                 case "/plaintext":
                     LockOper op = new LockOper()
                     {
@@ -90,8 +111,7 @@ namespace LockServer
                     };
                     var ack = Task.Run(async () =>
                     {
-                        await manager.TestWorkOperation(op);
-                        return 1;
+                        return await manager.TestWorkOperation(op);
                     }).GetAwaiter().GetResult();
 
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);

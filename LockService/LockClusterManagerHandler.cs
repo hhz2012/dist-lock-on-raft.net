@@ -1,4 +1,5 @@
-﻿using LockService;
+﻿using LockQueueLib;
+using LockService;
 using Raft.Core.Handler;
 
 using System;
@@ -9,10 +10,11 @@ namespace Raft.Core
 {
     public class LockClusterManagerHandler : IBusinessHandler
     {
-        
+        LockTable table = new LockTable();
         public LockClusterManagerHandler( )
         {
             
+                
         }
 
         public void ExecuteBusinessLogic(ulong index)
@@ -36,6 +38,12 @@ namespace Raft.Core
             if (GlobalConfig.Verbose)
             {
                 Console.WriteLine("receive entry:"+entry.Index+" on node:"+node.NodeName);
+            }
+            string text=System.Text.Encoding.UTF8.GetString(entry.Data);
+            var cmd=Newtonsoft.Json.JsonConvert.DeserializeObject<LockOper>(text);
+            if (cmd!=null)
+            {
+                bool succ=this.table.GetQueue(cmd.Key).LockNoWait(cmd.Session,cmd.Type);
             }
             return true;
         }

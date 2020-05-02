@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="HelloServerHandler.cs" />
     <Compile Remove="HttpProgram.cs" />
   </ItemGroup>
 

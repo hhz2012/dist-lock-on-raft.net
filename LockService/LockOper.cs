@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LockQueueLib;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,5 +10,7 @@ namespace LockService
         public string Oper { get; set; }
         public string Key { get; set; }
         public string Session { get; set; }
+
+        public LockType Type { get; set; } = LockType.Read;
     }
 }
