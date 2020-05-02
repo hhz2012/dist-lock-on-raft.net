@@ -72,7 +72,7 @@ namespace LockService
                         Port,
                         nodeName,
                         10000+i,
-                        new HelloServerHandler(this),
+                        new HelloServerHandler(),
                         log
                         );
                     this.Nodes.Add(trn);

@@ -1,7 +1,7 @@
 ﻿using LockQueueLib;
 using LockService;
 using Raft.Core.Handler;
-
+using Raft.Transport;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,12 +11,16 @@ namespace Raft.Core
     public class LockClusterManagerHandler : IBusinessHandler
     {
         LockTable table = new LockTable();
+        RaftServiceNode node = null;
         public LockClusterManagerHandler( )
         {
             
                 
         }
-
+        public void SetNode(RaftServiceNode node)
+        {
+            this.node = node;
+        }
         public void ExecuteBusinessLogic(ulong index)
         {
             throw new NotImplementedException();

@@ -8,6 +8,7 @@ namespace Raft.Core.Handler
     public interface IBusinessHandler
     {
         ReturnValueBase ExecuteBusinessLogic(StateLogEntry entry,RaftStateMachine node);
+        void SetNode(RaftServiceNode node);
     }
     public class ReturnValueBase
     {

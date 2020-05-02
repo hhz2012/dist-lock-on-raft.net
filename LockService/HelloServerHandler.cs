@@ -12,15 +12,20 @@ namespace LockServer
     using DotNetty.Common;
     using LockService;
     using System.Threading.Tasks;
+    using Raft.Core.Business;
+    using Raft.Transport;
 
-    
-    public  class HelloServerHandler : ChannelHandlerAdapter
+    public  class HelloServerHandler : ServiceChannelAdapter
     {
-        public HelloServerHandler(LockClusterManager manager)
+        public HelloServerHandler()
         {
-            this.manager = manager;
+            
         }
-        LockClusterManager manager = null;
+        override public void SetNode(RaftServiceNode node)
+        {
+            this.node = node;
+        }
+        RaftServiceNode node = null;
         static readonly ThreadLocalCache Cache = new ThreadLocalCache();
 
         sealed class ThreadLocalCache : FastThreadLocal<AsciiString>
@@ -77,8 +82,21 @@ namespace LockServer
                 ctx.FireChannelRead(message);
             }
         }
-
-         async Task Process(IChannelHandlerContext ctx, IHttpRequest request)
+        public async Task<object> BeginRequest(LockOper command)
+        {
+            string data = Newtonsoft.Json.JsonConvert.SerializeObject(command);
+            var node = this.node;
+            //Console.WriteLine("start lock oper" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            var result = await Task.Run(async () =>
+            {
+                var result = await this.node.AddLogEntryRequestAsync(System.Text.Encoding.UTF8.GetBytes(data)).ConfigureAwait(false);
+                return result;
+            }
+            );
+            // Console.WriteLine("await finished" + DateTime.Now.Second + ":" + DateTime.Now.Millisecond);
+            return result;
+        }
+        async Task Process(IChannelHandlerContext ctx, IHttpRequest request)
         {
             string uri = request.Uri;
             switch (uri)
@@ -92,7 +110,7 @@ namespace LockServer
                     };
                     var ack1 = Task.Run(async () =>
                     {
-                        return await manager.BeginRequest(op2);
+                        return await this.BeginRequest(op2);
                     }).GetAwaiter().GetResult();
 
                     //byte[] json2 = Encoding.UTF8.GetBytes(NewMessage2().ToJsonFormat());
@@ -116,7 +134,7 @@ namespace LockServer
                     };
                     var ack = Task.Run(async () =>
                     {
-                        return await manager.BeginRequest(op);
+                        return await this.BeginRequest(op);
                     }).GetAwaiter().GetResult();
 
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);

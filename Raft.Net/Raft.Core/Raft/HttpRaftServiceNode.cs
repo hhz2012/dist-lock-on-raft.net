@@ -5,6 +5,7 @@ using DotNetty.Common.Utilities;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using Raft.Core.Business;
 using Raft.Core.Handler;
 using Raft.Transport;
 using System;
@@ -17,7 +18,7 @@ namespace Raft.Core.Raft
     public class HttpRaftServiceNode : RaftServiceNode
     {
         int httpPort=0;
-        ChannelHandlerAdapter adapter = null;
+        ServiceChannelAdapter adapter = null;
 
         public HttpRaftServiceNode(NodeSettings nodeSettings,
                                    string dbreezePath,
@@ -25,12 +26,14 @@ namespace Raft.Core.Raft
                                    int port = 4250,
                                    string nodeName = "default",
                                    int httpPort=10000,
-                                   ChannelHandlerAdapter adapter=null,
+                                   ServiceChannelAdapter adapter=null,
                                    IWarningLog log = null)
             :base(nodeSettings,dbreezePath,handler,port,nodeName,log)
         {
             this.httpPort = httpPort;
             this.adapter = adapter;
+            handler.SetNode(this);
+            this.adapter.SetNode(this);
         }
       
       
