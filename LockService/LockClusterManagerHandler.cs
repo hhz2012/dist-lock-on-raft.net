@@ -32,7 +32,7 @@ namespace Raft.Core
             return true;
         }
 
-        public bool ExecuteBusinessLogic(StateLogEntry entry, RaftStateMachine node)
+        public ReturnValueBase ExecuteBusinessLogic(StateLogEntry entry, RaftStateMachine node)
         {
             node.NodeStateLog.LastBusinessLogicCommittedIndex = entry.Index;
             if (GlobalConfig.Verbose)
@@ -44,8 +44,18 @@ namespace Raft.Core
             if (cmd!=null)
             {
                 bool succ=this.table.GetQueue(cmd.Key).LockNoWait(cmd.Session,cmd.Type);
+                return new ReturnValueBase
+                {
+                    Success = succ,
+                    Message= "operation finished"
+                };
             }
-            return true;
+            return new ReturnValueBase()
+            {
+                Success = false,
+                Message = "wrong command"
+            };
+            
         }
     }
 }

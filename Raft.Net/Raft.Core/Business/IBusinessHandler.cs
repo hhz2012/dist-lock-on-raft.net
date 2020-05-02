@@ -7,6 +7,11 @@ namespace Raft.Core.Handler
 {
     public interface IBusinessHandler
     {
-        bool ExecuteBusinessLogic(StateLogEntry entry,RaftStateMachine node);
+        ReturnValueBase ExecuteBusinessLogic(StateLogEntry entry,RaftStateMachine node);
+    }
+    public class ReturnValueBase
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
     }
 }

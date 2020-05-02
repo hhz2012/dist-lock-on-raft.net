@@ -39,7 +39,7 @@ namespace NodeTest.Core
                     Oper = "lock",
                     Session = "session1"
                 };
-                cluster.TestWorkOperation(op);
+                cluster.BeginRequest(op);
 
             }
             Console.ReadLine();

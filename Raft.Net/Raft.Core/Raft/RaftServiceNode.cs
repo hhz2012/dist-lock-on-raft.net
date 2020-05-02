@@ -96,7 +96,7 @@ namespace Raft.Transport
         /// <param name="timeoutMs"></param>
         /// <returns></returns>
                
-        public async Task<bool> AddLogEntryRequestAsync(byte[] data, string entityName = "default", int timeoutMs = 20000)
+        public async Task<object> AddLogEntryRequestAsync(byte[] data, string entityName = "default", int timeoutMs = 20000)
         {
             if (System.Threading.Interlocked.Read(ref disposed) == 1)
                 return false;
@@ -121,16 +121,16 @@ namespace Raft.Transport
                         if (AsyncResponseHandler.df.TryRemove(msgIdStr, out resp))
                         {
                            if (resp.IsRespOk)
-                                return true;
+                                return resp.ReturnValue;
                         }
                         break;
                     default:
                         resp.Dispose_MRE();
                         AsyncResponseHandler.df.TryRemove(msgIdStr, out resp);
-                        return false;
+                        return resp.ReturnValue;
                 }
             }
-            return false;
+            return null;
         }
         long disposed = 0;
         public bool Disposed

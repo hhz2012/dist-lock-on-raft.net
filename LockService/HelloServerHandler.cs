@@ -92,13 +92,18 @@ namespace LockServer
                     };
                     var ack1 = Task.Run(async () =>
                     {
-                        return await manager.TestWorkOperation(op2);
+                        return await manager.BeginRequest(op2);
                     }).GetAwaiter().GetResult();
 
                     //byte[] json2 = Encoding.UTF8.GetBytes(NewMessage2().ToJsonFormat());
                     //this.WriteResponse(ctx, Unpooled.WrappedBuffer(json2), TypeJson, JsonClheaderValue);
+                    string str= "null";
+                    if (ack1 != null)
+                    {
+                         str = Newtonsoft.Json.JsonConvert.SerializeObject(ack1);
 
-                    byte[] json2 = Encoding.UTF8.GetBytes(new MessageBody(ack1).ToJsonFormat());
+                    }
+                    byte[] json2 = Encoding.UTF8.GetBytes(new MessageBody(str).ToJsonFormat());
                     var length = json2.Length;
                     this.WriteResponse(ctx, Unpooled.WrappedBuffer(json2), TypeJson, AsciiString.Cached($"{length}"));
                     break;
@@ -111,7 +116,7 @@ namespace LockServer
                     };
                     var ack = Task.Run(async () =>
                     {
-                        return await manager.TestWorkOperation(op);
+                        return await manager.BeginRequest(op);
                     }).GetAwaiter().GetResult();
 
                     this.WriteResponse(ctx, PlaintextContentBuffer.Duplicate(), TypePlain, PlaintextClheaderValue);

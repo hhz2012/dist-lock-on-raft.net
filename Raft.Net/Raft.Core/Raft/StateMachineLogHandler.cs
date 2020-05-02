@@ -28,7 +28,7 @@ namespace Raft.Core.Raft
         /// Key is StateLogEntryId, Value contains information about how many nodes accepted LogEntry
         /// </summary>
         Dictionary<ulong, StateLogEntryAcceptance> acceptStateTable = new Dictionary<ulong, StateLogEntryAcceptance>();
-      
+
 
         public StateMachineLogHandler(RaftStateMachine stateMachine, IStateLog log, IBusinessHandler handler)
         {
@@ -161,27 +161,27 @@ namespace Raft.Core.Raft
                         {
                             Console.WriteLine("before call business logic");
                         }
-                        if (this.businessLogicHandler.ExecuteBusinessLogic(sle,this.stateMachine))
-                        {
-                            //In case if business logic commit was successful
+                        var executeResult = this.businessLogicHandler.ExecuteBusinessLogic(sle, this.stateMachine);
+                        //In case if business logic commit was successful
 
-                            //Notifying Async AddLog
-                            if (GlobalConfig.Verbose)
-                            {
-                                Console.WriteLine("before release lock");
-                            }
-                            if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
-                            {
-                                responseCrate.IsRespOk = true;
-                                responseCrate.res = sle.ExternalID;
-                                responseCrate.Set_MRE();
-                            }
-                        }
-                        else
+                        //Notifying Async AddLog
+                        //if (GlobalConfig.Verbose)
+                        //{
+                        //    Console.WriteLine("before release lock");
+                        //}
+                        if (sle.ExternalID != null && AsyncResponseHandler.df.TryGetValue(sle.ExternalID.ToBytesString(), out var responseCrate))
                         {
-                            await Task.Delay(500);
-                            //repeating with the same id
+                            responseCrate.IsRespOk = true;
+                            responseCrate.ReturnValue = executeResult;
+                            responseCrate.res = sle.ExternalID;
+                            responseCrate.Set_MRE();
                         }
+
+                        //else
+                        //{
+                        //    await Task.Delay(500);
+                        //    //repeating with the same id
+                        //}
                     }
                     catch (Exception ex)
                     {
@@ -362,7 +362,7 @@ namespace Raft.Core.Raft
             if ((acc.acceptedEndPoints.Count + 1) >= majorityQuantity)
             {
                 this.log.LastAppliedIndex = applied.StateLogEntryId;
-                
+
                 //Removing from Dictionary
                 acceptStateTable.Remove(applied.StateLogEntryId);
 

@@ -19,6 +19,7 @@ namespace Raft
         public byte[] res = null;
         public Action<Tuple<bool, byte[]>> callBack = null;
         public bool IsRespOk = false;
+        public object ReturnValue = null;
 
         public ManualResetEventSlim amre = null;
 
