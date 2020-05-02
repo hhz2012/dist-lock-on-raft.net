@@ -27,7 +27,7 @@ namespace Raft
 
 
         //get function 
-        StateLogEntry GetCommitedEntryByIndex(ulong logEntryId);
+        StateLogEntry GetCommitedEntryByIndex(ulong logEntryTerm,ulong logEntryId);
         StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm);
         //load local log for follower
         StateLogEntrySuggestion GetNextStateLogEntrySuggestion(StateLogEntryRequest req);

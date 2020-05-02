@@ -146,7 +146,9 @@ namespace Raft.Core.Raft
                         }
                         else
                         {
-                            sle = this.stateMachine.NodeStateLog.GetCommitedEntryByIndex(this.stateMachine.NodeStateLog.LastBusinessLogicCommittedIndex + 1);
+                            sle = this.stateMachine.NodeStateLog.GetCommitedEntryByIndex(
+                                this.stateMachine.NodeStateLog.LastCommittedIndexTerm,
+                                this.stateMachine.NodeStateLog.LastBusinessLogicCommittedIndex + 1);
                             if (sle == null)
                             {
                                 System.Threading.Interlocked.Exchange(ref this.stateMachine.States.inCommit, 0);

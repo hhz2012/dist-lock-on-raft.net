@@ -1,15 +1,19 @@
-﻿using System;
+﻿using LevelDB;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Raft.Core.LogStore
 {
-    public class SimpleMemLogStore : IStateLog
+    public class LevelDbLogStore : IStateLog
     {
         RaftStateMachine stateMachine = null;
-        public SimpleMemLogStore(RaftStateMachine rn,string path)
+        DB db = null;
+        public LevelDbLogStore(RaftStateMachine rn,string path)
         {
             this.stateMachine = rn;
+            string logdbFile = path + "\\logdb.db";
+            db = DB.Open(logdbFile);
         }
         public ulong StateLogId { get; set; }
         public ulong StateLogTerm { get; set; }
@@ -21,34 +25,59 @@ namespace Raft.Core.LogStore
         public ulong PreviousStateLogId = 0;
         public ulong PreviousStateLogTerm = 0;
 
-        private List<StateLogEntry> list = new List<StateLogEntry>();
+       
 
         public void AddFakePreviousRecordForInMemoryLatestEntity(ulong prevIndex, ulong prevTerm)
         {
             throw new NotImplementedException();
         }
+        public byte[] GetKey(ulong term, ulong index)
+        {
+            byte[] v1=BitConverter.GetBytes(index);
+            byte[] v2 = BitConverter.GetBytes(index);
+            byte[] key = new byte[v1.Length + v2.Length];
+            for (int i = 0; i < v1.Length; i++) key[i] = v1[i];
+            for (int i = 0; i < v1.Length; i++) key[i+v1.Length] = v2[i];
+            return key;
 
+        }
         public void AddLogEntry(StateLogEntrySuggestion suggestion)
         {
             PreviousStateLogId = suggestion.StateLogEntry.PreviousStateLogId;
             PreviousStateLogTerm = suggestion.StateLogEntry.PreviousStateLogTerm;
             StateLogId = suggestion.StateLogEntry.Index;
             StateLogTerm = suggestion.StateLogEntry.Term;
-            if (list.Exists(s => s.Index == suggestion.StateLogEntry.Index && s.Term == suggestion.StateLogEntry.Term))
+            var key = GetKey(suggestion.StateLogEntry.Term, suggestion.StateLogEntry.Index);
+            Slice value;
+            var find = db.TryGet(ReadOptions.Default, (Slice)key,out value);
+            if (find)
             {
-                var oldValue = list.Find(s => s.Index == suggestion.StateLogEntry.Index);
-                oldValue.IsCommitted = suggestion.IsCommitted;
+                var entry = StateLogEntry.BiserDecode(value.ToArray());
+                entry.IsCommitted = suggestion.IsCommitted;
+                value = (Slice)entry.BiserEncoder().Encode();
+                db.Put(WriteOptions.Default, key, value);
             }
             else
             {
-                this.list.Add(suggestion.StateLogEntry);
+                db.Put(WriteOptions.Default, key, (Slice)suggestion.StateLogEntry.BiserEncoder().Encode());
             }
         }
 
         public void AddLogEntryByFollower(StateLogEntrySuggestion suggestion)
         {
             //remove all log bigger than this,(clear no committed logs)
-            list.RemoveAll(s => s.Term >= suggestion.StateLogEntry.Term || s.Index > suggestion.LeaderTerm);
+            var key = GetKey(suggestion.StateLogEntry.Term, suggestion.StateLogEntry.Index);
+            var iter = db.NewIterator(ReadOptions.Default);
+            iter.Seek(key);
+            while(true)
+            {
+                iter.Next();
+                if (iter.Valid())
+                {
+                    db.Delete(WriteOptions.Default, iter.Key());
+                }
+                else break;
+            }
             //add this one
             AddLogEntry(suggestion);
             //update commit status
@@ -75,16 +104,23 @@ namespace Raft.Core.LogStore
             //If we receive acceptance signals of already Committed entries, we just ignore them
             if (this.LastCommittedIndex < applied.StateLogEntryId && stateMachine.NodeTerm == applied.StateLogEntryTerm)    //Setting LastCommittedId
             {
-                var tocommit = list.FindAll(s => s.Term == applied.StateLogEntryTerm
-                               && s.Index <= applied.StateLogEntryId
-                               && s.IsCommitted == false);
-                if (tocommit.Count>0)
+                var key = GetKey(applied.StateLogEntryTerm, applied.StateLogEntryId);
+                var iter = db.NewIterator(ReadOptions.Default);
+                iter.Seek(key);
+                int update = 0;
+                while(iter.Valid())
                 {
-                    tocommit.ForEach(s => s.IsCommitted = true);
+                    var entry = StateLogEntry.BiserDecode(iter.Value().ToArray());
+                    if (entry.IsCommitted) break;
+                    entry.IsCommitted = true;
+                    var value = (Slice)entry.BiserEncoder().Encode();
+                    db.Put(WriteOptions.Default, key, value);
+                    update++;
+                    iter.Prev();
                 }
                 this.LastCommittedIndex = applied.StateLogEntryId;
                 this.LastCommittedIndexTerm = applied.StateLogEntryTerm;
-                return tocommit.Count > 0;
+                return update > 0;
                 
             }
             return false;
@@ -101,12 +137,28 @@ namespace Raft.Core.LogStore
 
         public StateLogEntry GetCommitedEntryByIndex(ulong logEntryTerm,ulong logEntryId)
         {
-            return list.Find(s => s.Index == logEntryId && s.IsCommitted == true);
+            var key = GetKey(logEntryTerm, logEntryId);
+            Slice value;
+            var find = db.TryGet(ReadOptions.Default, (Slice)key, out value);
+            if (find)
+            {
+                var entry = StateLogEntry.BiserDecode(value.ToArray());
+                return entry;
+            }
+            return null;
         }
 
         public StateLogEntry GetEntryByIndexTerm(ulong logEntryId, ulong logEntryTerm)
         {
-            return list.Find(s => s.Index == logEntryId && s.Term == logEntryTerm);
+            var key = GetKey(logEntryTerm, logEntryId);
+            Slice value;
+            var find = db.TryGet(ReadOptions.Default, (Slice)key, out value);
+            if (find)
+            {
+                var entry = StateLogEntry.BiserDecode(value.ToArray());
+                return entry;
+            }
+            return null;
         }
 
         public StateLogEntrySuggestion GetNextStateLogEntrySuggestion(StateLogEntryRequest req)
@@ -121,22 +173,35 @@ namespace Raft.Core.LogStore
             if (req.StateLogEntryId == 0)
             {
                 //send first record to sync
-                entry = list.Find(s => s.IsCommitted == true);
+                var key = GetKey(0, 0);
+                Slice value;
+                var iter = db.NewIterator(ReadOptions.Default);
+                iter.Seek(key);
+                iter.Next();
+                while(iter.Valid())
+                {
+                    entry = StateLogEntry.BiserDecode(value.ToArray());
+                    if (entry.IsCommitted) break;
+                    iter.Next();
+                }
             }
             else
-            { 
-                for (int index = 0; index <list.Count; index++)
+            {
+                var key = GetKey(req.StateLogEntryTerm, req.StateLogEntryId);
+                Slice value;
+                var iter = db.NewIterator(ReadOptions.Default);
+                iter.Seek(key);
+                var lastOne = iter.Value();
+                iter.Next();
+                while (iter.Valid())
                 {
-                    if (list[index].Index >req.StateLogEntryId)
+                    entry = StateLogEntry.BiserDecode(value.ToArray());
+                    if (entry.Index>req.StateLogEntryId)
                     {
-                        //find next one and set preview value
-                        if (index>0)
-                        {
-                            prevId = list[index - 1].Index;
-                            prevTerm = list[index - 1].Term;
-                            entry = list[index];
-                            break;
-                        }
+                        var oldEntry = StateLogEntry.BiserDecode(lastOne.ToArray());
+                        prevId = oldEntry.Index;
+                        prevTerm = oldEntry.Term;
+                        
                     }
                 }
             }
@@ -163,7 +228,18 @@ namespace Raft.Core.LogStore
         {
             if (LastCommittedIndex == 0 || LastCommittedIndexTerm == 0)
                 return;
-            list.RemoveAll(s => s.Term >= LastCommittedIndexTerm && s.Index > LastCommittedIndex);
+            var key = GetKey(0, 0);
+            Slice value;
+            var iter = db.NewIterator(ReadOptions.Default);
+            iter.SeekToLast();
+            while(iter.Valid())
+            {
+                var entry = StateLogEntry.BiserDecode(iter.Value().ToArray());
+                if (entry.Term >= LastCommittedIndexTerm&&entry.Index>LastCommittedIndex)
+                {
+                    db.Delete(WriteOptions.Default, iter.Key());
+                }
+            }
         }
 
         public SyncResult SyncCommitByHeartBeat(LeaderHeartbeat lhb)
@@ -174,14 +250,19 @@ namespace Raft.Core.LogStore
             }
                 if (this.LastCommittedIndex < lhb.LastStateLogCommittedIndex)
             {
-                
+
                 //find if this entry exist 
-                var entry = list.Find(s => s.Term == lhb.LastStateLogCommittedIndexTerm && s.Index == lhb.StateLogLatestIndex);
-                if (entry != null)
+                var key = GetKey(lhb.LastStateLogCommittedIndexTerm, lhb.StateLogLatestIndex);
+                Slice value;
+                var find = db.TryGet(ReadOptions.Default, (Slice)key, out value);
+                if (find)
                 {
+                    var entry = StateLogEntry.BiserDecode(value.ToArray());
                     if (!entry.IsCommitted)
                     {
                         entry.IsCommitted = true;
+                        value = (Slice)entry.BiserEncoder().Encode();
+                        db.Put(WriteOptions.Default, key, value);
                         this.LastCommittedIndex = lhb.LastStateLogCommittedIndex;
                         return new SyncResult() { HasCommit = true, Synced = true };
                     }
