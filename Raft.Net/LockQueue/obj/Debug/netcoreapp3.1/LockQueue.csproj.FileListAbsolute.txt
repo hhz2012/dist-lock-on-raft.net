@@ -6,3 +6,4 @@ D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.A
 D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.AssemblyInfo.cs
 D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueueLib.dll
 D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueueLib.pdb
+D:\mywork\myproj\distlock\Raft.Net\LockQueue\obj\Debug\netcoreapp3.1\LockQueue.csprojAssemblyReference.cache

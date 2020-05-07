@@ -25,7 +25,7 @@ namespace LockService
     public class LockClusterManager
     {
         public static LockClusterManager manager = null;
-        public static string PathRoot = @"D:\Temp\RaftDBreeze\node\";
+        public static string PathRoot = @"D:\Temp\RaftDb\node\";
         object sync_nodes = new object();
         public List<HttpRaftServiceNode> Nodes { get; set; } = new List<HttpRaftServiceNode>();
         public static int CurrentPort = 10000;
