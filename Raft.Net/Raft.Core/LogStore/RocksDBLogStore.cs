@@ -20,6 +20,8 @@ namespace Raft.Core.LogStore
             var options = new DbOptions()
             .SetCreateIfMissing(true);
             db = RocksDb.Open(options, logdbFile);
+
+            this.ReloadFromStorage();
         }
         public ulong StateLogId { get; set; }
         public ulong StateLogTerm { get; set; }
@@ -228,7 +230,24 @@ namespace Raft.Core.LogStore
         public void ReloadFromStorage()
         {
             //should load from log files
-           
+            var iter = db.NewIterator();
+            iter.SeekToLast();
+            while (iter.Valid())
+            {
+                var entry = StateLogEntry.BiserDecode(iter.Value());
+                StateLogId = entry.Index;
+                StateLogTerm = entry.Term;
+                PreviousStateLogId = entry.PreviousStateLogId;
+                PreviousStateLogTerm = entry.PreviousStateLogTerm;
+                stateMachine.NodeTerm = entry.Term;
+                if (entry.IsCommitted)
+                {
+                    LastCommittedIndex = entry.Index;
+                    LastCommittedIndexTerm = entry.Term;
+                    LastBusinessLogicCommittedIndex = entry.Index;
+                    return;
+                }
+            }
 
         }
 
